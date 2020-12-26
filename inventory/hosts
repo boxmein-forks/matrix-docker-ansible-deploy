@@ -15,4 +15,4 @@
 # You may sometimes need to explicitly add `ansible_python_interpreter=/usr/bin/python3` to lines below.
 
 [matrix_servers]
-matrix.boxmein.net ansible_host=13.49.102.122 ansible_user=ubuntu
+matrix.boxmein.net ansible_host=13.51.36.144 ansible_user=ubuntu
