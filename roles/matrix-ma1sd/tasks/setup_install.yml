@@ -79,21 +79,24 @@
     git:
       repo: "{{ matrix_ma1sd_container_image_self_build_repo }}"
       dest: "{{ matrix_ma1sd_docker_src_files_path }}"
-      version: "{{ matrix_ma1sd_docker_image.split(':')[1].split('-')[0] }}"
+      version: "{{ matrix_ma1sd_container_image_self_build_branch }}"
       force: "yes"
     register: matrix_ma1sd_git_pull_results
 
   - name: Ensure ma1sd Docker image is built
-    shell: "./gradlew dockerBuild"
+    shell: "DOCKER_BUILDKIT=1 ./gradlew dockerBuild"
     args:
       chdir: "{{ matrix_ma1sd_docker_src_files_path }}"
 
   - name: Ensure ma1sd Docker image is tagged correctly
     docker_image:
-      # The build script always tags the image with something like `ma1uta/ma1sd:2.4.0`.
-      # Remove the `-{{ matrix_ma1sd_architecture }}` suffix and our `localhost/` prefix (applied when self-building)
-      # to get to what has actually been built, so we can retag it as `{{ matrix_ma1sd_docker_image }}`.
-      name: "{{ matrix_ma1sd_docker_image.split('-')[0].replace('localhost/', '') }}"
+      # The build script always tags the image with 2 tags:
+      # - based on the branch/version: e.g. `ma1uta/ma1sd:2.4.0` (when on `2.4.0`)
+      #   or `ma1uta/ma1sd:2.4.0-19-ga71d32b` (when on a given commit for a pre-release)
+      # - generic one: `ma1uta/ma1sd:latest-dev`
+      #
+      # It's hard to predict the first one, so we'll use the latter.
+      name: "ma1uta/ma1sd:latest-dev"
       repository: "{{ matrix_ma1sd_docker_image }}"
       force_tag: yes
       source: local
@@ -107,17 +110,41 @@
     owner: "{{ matrix_user_username }}"
     group: "{{ matrix_user_groupname }}"
 
-- name: Ensure custom templates are installed if any
+- name: Ensure custom view templates are installed, if any
   copy:
     content: "{{ item.value }}"
-    dest: "{{ matrix_ma1sd_data_path }}/{{ item.location }}"
+    dest: "{{ matrix_ma1sd_config_path }}/{{ item.location }}"
+    mode: 0644
+    owner: "{{ matrix_user_username }}"
+    group: "{{ matrix_user_groupname }}"
+  with_items:
+    - {value: "{{ matrix_ma1sd_view_session_custom_onTokenSubmit_success_template }}", location: 'tokenSubmitSuccess.html'}
+    - {value: "{{ matrix_ma1sd_view_session_custom_onTokenSubmit_failure_template }}", location: 'tokenSubmitFailure.html'}
+  when: "matrix_ma1sd_view_session_custom_templates_enabled|bool and item.value"
+
+- name: Ensure custom email templates are installed, if any
+  copy:
+    content: "{{ item.value }}"
+    dest: "{{ matrix_ma1sd_config_path }}/{{ item.location }}"
     mode: 0644
     owner: "{{ matrix_user_username }}"
     group: "{{ matrix_user_groupname }}"
   with_items:
     - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_invite_template }}", location: 'invite-template.eml'}
     - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_session_validation_template }}", location: 'validate-template.eml'}
-    - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_unbind_fraudulent_template }}", location: 'unbind-fraudulent.eml'}
+    - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_session_unbind_notification_template }}", location: 'unbind-notification.eml'}
+    - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_matrixid_template }}", location: 'mxid-template.eml'}
+  when: "matrix_ma1sd_threepid_medium_email_custom_templates_enabled|bool and item.value"
+
+# Only cleaning up for people who define the respective templates
+- name: (Cleanup) Ensure custom email templates are not in data/ anymore (we've put them in config/)
+  file:
+    path: "{{ matrix_ma1sd_data_path }}/{{ item.location }}"
+    state: absent
+  with_items:
+    - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_invite_template }}", location: 'invite-template.eml'}
+    - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_session_validation_template }}", location: 'validate-template.eml'}
+    - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_session_unbind_notification_template }}", location: 'unbind-notification.eml'}
     - {value: "{{ matrix_ma1sd_threepid_medium_email_custom_matrixid_template }}", location: 'mxid-template.eml'}
   when: "matrix_ma1sd_threepid_medium_email_custom_templates_enabled|bool and item.value"
 

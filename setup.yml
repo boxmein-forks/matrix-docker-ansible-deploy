@@ -3,11 +3,15 @@
   hosts: "{{ target if target is defined else 'matrix_servers' }}"
   become: true
 
+  vars_files:
+    - roles/matrix-synapse/vars/workers.yml
+
   roles:
     - matrix-base
     - matrix-dynamic-dns
     - matrix-mailer
     - matrix-postgres
+    - matrix-redis
     - matrix-corporal
     - matrix-bridge-appservice-discord
     - matrix-bridge-appservice-slack
@@ -15,9 +19,12 @@
     - matrix-bridge-appservice-irc
     - matrix-bridge-mautrix-facebook
     - matrix-bridge-mautrix-hangouts
+    - matrix-bridge-mautrix-instagram
+    - matrix-bridge-mautrix-signal
     - matrix-bridge-mautrix-telegram
     - matrix-bridge-mautrix-whatsapp
     - matrix-bridge-mx-puppet-discord
+    - matrix-bridge-mx-puppet-groupme
     - matrix-bridge-mx-puppet-steam
     - matrix-bridge-mx-puppet-skype
     - matrix-bridge-mx-puppet-slack
@@ -27,12 +34,17 @@
     - matrix-bot-matrix-reminder-bot
     - matrix-synapse
     - matrix-synapse-admin
+    - matrix-prometheus-node-exporter
+    - matrix-prometheus
+    - matrix-grafana
     - matrix-registration
     - matrix-client-element
     - matrix-jitsi
     - matrix-ma1sd
     - matrix-dimension
+    - matrix-etherpad
     - matrix-email2matrix
     - matrix-nginx-proxy
     - matrix-coturn
+    - matrix-aux
     - matrix-common-after
