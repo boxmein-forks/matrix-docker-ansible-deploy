@@ -39,8 +39,3 @@ scrape_configs:
       - targets: {{ matrix_prometheus_scraper_node_targets|to_json }}
   {% endif %}
 
-remote_write:
-- url: {{ boxmein_prometheus_remote_write_url }}
-  basic_auth:
-    username: {{ boxmein_prometheus_remote_write_user }}
-    password: {{ boxmein_prometheus_remote_write_pass }}
