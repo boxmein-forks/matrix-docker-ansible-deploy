@@ -1,14 +1,15 @@
 matrix_nginx_proxy_enabled: true
-matrix_nginx_proxy_version: 1.19.6-alpine
+matrix_nginx_proxy_version: 1.20.0-alpine
 
 # We use an official nginx image, which we fix-up to run unprivileged.
 # An alternative would be an `nginxinc/nginx-unprivileged` image, but
 # that is frequently out of date.
-matrix_nginx_proxy_docker_image: "docker.io/nginx:{{ matrix_nginx_proxy_version }}"
+matrix_nginx_proxy_docker_image: "{{ matrix_container_global_registry_prefix }}nginx:{{ matrix_nginx_proxy_version }}"
 matrix_nginx_proxy_docker_image_force_pull: "{{ matrix_nginx_proxy_docker_image.endswith(':latest') }}"
 
 matrix_nginx_proxy_base_path: "{{ matrix_base_data_path }}/nginx-proxy"
 matrix_nginx_proxy_data_path: "{{ matrix_nginx_proxy_base_path }}/data"
+matrix_nginx_proxy_data_path_in_container: "/nginx-data"
 matrix_nginx_proxy_confd_path: "{{ matrix_nginx_proxy_base_path }}/conf.d"
 
 # List of systemd services that matrix-nginx-proxy.service depends on
@@ -103,6 +104,10 @@ matrix_nginx_proxy_proxy_riot_compat_redirect_hostname: "riot.{{ matrix_domain }
 # Controls whether proxying the Synapse domain should be done.
 matrix_nginx_proxy_proxy_synapse_enabled: false
 matrix_nginx_proxy_proxy_synapse_hostname: "matrix-nginx-proxy"
+matrix_nginx_proxy_proxy_synapse_federation_api_enabled: "{{ matrix_nginx_proxy_proxy_matrix_federation_api_enabled }}"
+# The addresses where the Federation API is, when using Synapse.
+matrix_nginx_proxy_proxy_synapse_federation_api_addr_with_container: "matrix-synapse:8048"
+matrix_nginx_proxy_proxy_synapse_federation_api_addr_sans_container: "localhost:8048"
 
 # Controls whether proxying the Element domain should be done.
 matrix_nginx_proxy_proxy_element_enabled: false
@@ -120,6 +125,10 @@ matrix_nginx_proxy_proxy_matrix_federation_port: 8448
 matrix_nginx_proxy_proxy_dimension_enabled: false
 matrix_nginx_proxy_proxy_dimension_hostname: "{{ matrix_server_fqn_dimension }}"
 
+# Controls whether proxying the goneb domain should be done.
+matrix_nginx_proxy_proxy_bot_go_neb_enabled: false
+matrix_nginx_proxy_proxy_bot_go_neb_hostname: "{{ matrix_server_fqn_bot_go_neb }}"
+
 # Controls whether proxying the jitsi domain should be done.
 matrix_nginx_proxy_proxy_jitsi_enabled: false
 matrix_nginx_proxy_proxy_jitsi_hostname: "{{ matrix_server_fqn_jitsi }}"
@@ -127,6 +136,10 @@ matrix_nginx_proxy_proxy_jitsi_hostname: "{{ matrix_server_fqn_jitsi }}"
 # Controls whether proxying the grafana domain should be done.
 matrix_nginx_proxy_proxy_grafana_enabled: false
 matrix_nginx_proxy_proxy_grafana_hostname: "{{ matrix_server_fqn_grafana }}"
+
+# Controls whether proxying the sygnal domain should be done.
+matrix_nginx_proxy_proxy_sygnal_enabled: false
+matrix_nginx_proxy_proxy_sygnal_hostname: "{{ matrix_server_fqn_sygnal }}"
 
 # Controls whether proxying for the matrix-corporal API (`/_matrix/corporal`) should be done (on the matrix domain)
 matrix_nginx_proxy_proxy_matrix_corporal_api_enabled: false
@@ -211,12 +224,17 @@ matrix_nginx_proxy_proxy_matrix_federation_api_client_max_body_size_mb: "{{ (mat
 matrix_nginx_proxy_proxy_matrix_federation_api_ssl_certificate: "{{ matrix_ssl_config_dir_path }}/live/{{ matrix_nginx_proxy_proxy_matrix_hostname }}/fullchain.pem"
 matrix_nginx_proxy_proxy_matrix_federation_api_ssl_certificate_key: "{{ matrix_ssl_config_dir_path }}/live/{{ matrix_nginx_proxy_proxy_matrix_hostname }}/privkey.pem"
 
-# The addresses where the Federation API is, when using Synapse.
-matrix_nginx_proxy_proxy_synapse_federation_api_addr_with_container: "matrix-synapse:8048"
-matrix_nginx_proxy_proxy_synapse_federation_api_addr_sans_container: "localhost:8048"
-
 # The tmpfs at /tmp needs to be large enough to handle multiple concurrent file uploads.
 matrix_nginx_proxy_tmp_directory_size_mb: "{{ (matrix_nginx_proxy_proxy_matrix_federation_api_client_max_body_size_mb | int) * 50 }}"
+
+# A list of strings containing additional configuration blocks to add to the nginx server configuration (nginx.conf).
+# for big matrixservers to enlarge the number of open files to prevent timeouts
+# matrix_nginx_proxy_proxy_additional_configuration_blocks:
+#  - 'worker_rlimit_nofile 30000;'
+matrix_nginx_proxy_proxy_additional_configuration_blocks: []
+
+# A list of strings containing additional configuration blocks to add to the nginx event server configuration (nginx.conf).
+matrix_nginx_proxy_proxy_event_additional_configuration_blocks: []
 
 # A list of strings containing additional configuration blocks to add to the nginx http's server configuration (nginx-http.conf).
 matrix_nginx_proxy_proxy_http_additional_server_configuration_blocks: []
@@ -236,14 +254,30 @@ matrix_nginx_proxy_proxy_element_additional_server_configuration_blocks: []
 # A list of strings containing additional configuration blocks to add to Dimension's server configuration (matrix-dimension.conf).
 matrix_nginx_proxy_proxy_dimension_additional_server_configuration_blocks: []
 
+# A list of strings containing additional configuration blocks to add to GoNEB's server configuration (matrix-bot-go-neb.conf).
+matrix_nginx_proxy_proxy_bot_go_neb_additional_server_configuration_blocks: []
+
 # A list of strings containing additional configuration blocks to add to Jitsi's server configuration (matrix-jitsi.conf).
 matrix_nginx_proxy_proxy_jitsi_additional_server_configuration_blocks: []
 
 # A list of strings containing additional configuration blocks to add to Grafana's server configuration (matrix-grafana.conf).
 matrix_nginx_proxy_proxy_grafana_additional_server_configuration_blocks: []
 
+# A list of strings containing additional configuration blocks to add to Sygnal's server configuration (matrix-sygnal.conf).
+matrix_nginx_proxy_proxy_sygnal_additional_server_configuration_blocks: []
+
 # A list of strings containing additional configuration blocks to add to the base domain server configuration (matrix-base-domain.conf).
 matrix_nginx_proxy_proxy_domain_additional_server_configuration_blocks: []
+
+# Controls whether to send a "Permissions-Policy interest-cohort=();" header along with all responses for all vhosts meant to be accessed by users.
+#
+# Learn more about what it is here:
+# - https://www.eff.org/deeplinks/2021/03/googles-floc-terrible-idea
+# - https://paramdeo.com/blog/opting-your-website-out-of-googles-floc-network
+# - https://amifloced.org/
+#
+# Of course, a better solution is to just stop using browsers (like Chrome), which participate in such tracking practices.
+matrix_nginx_proxy_floc_optout_enabled: true
 
 # Specifies the SSL configuration that should be used for the SSL protocols and ciphers
 # This is based on the Mozilla Server Side TLS Recommended configurations.
@@ -330,7 +364,7 @@ matrix_ssl_additional_domains_to_obtain_certificates_for: []
 
 # Controls whether to obtain production or staging certificates from Let's Encrypt.
 matrix_ssl_lets_encrypt_staging: false
-matrix_ssl_lets_encrypt_certbot_docker_image: "docker.io/certbot/certbot:{{ matrix_ssl_architecture }}-v1.11.0"
+matrix_ssl_lets_encrypt_certbot_docker_image: "{{ matrix_container_global_registry_prefix }}certbot/certbot:{{ matrix_ssl_architecture }}-v1.14.0"
 matrix_ssl_lets_encrypt_certbot_docker_image_force_pull: "{{ matrix_ssl_lets_encrypt_certbot_docker_image.endswith(':latest') }}"
 matrix_ssl_lets_encrypt_certbot_standalone_http_port: 2402
 matrix_ssl_lets_encrypt_support_email: ~
