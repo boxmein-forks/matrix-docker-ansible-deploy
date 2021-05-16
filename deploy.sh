@@ -6,7 +6,7 @@ if ! command -v ansible-playbook >/dev/null 2>/dev/null; then
 fi
 
 run_ansible_command() {
-	ansible-playbook --ask-vault-pass -i inventory/hosts setup.yml --tags=${1}
+	ansible-playbook --ask-become-pass --ask-vault-pass -i inventory/hosts setup.yml --tags=${1}
 }
 
 verify_setup() {
