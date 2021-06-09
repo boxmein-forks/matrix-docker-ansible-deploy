@@ -29,9 +29,12 @@ usage() {
 }
 
 case $1 in
+	-h) usage ;;
 	self-check) self_check ;;
 	start) start ;;
 	verify-setup) verify_setup ;;
-	*) usage ;;
+	*)
+		verify_setup
+		start
 esac
 
