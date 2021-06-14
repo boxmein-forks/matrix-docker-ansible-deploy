@@ -28,13 +28,16 @@ usage() {
     echo "./deploy.sh (self-check|start|verify-setup)"
 }
 
+synchronize() {
+	run_ansible_command setup-all,start
+}
+
 case $1 in
 	-h) usage ;;
 	self-check) self_check ;;
 	start) start ;;
 	verify-setup) verify_setup ;;
 	*)
-		verify_setup
-		start
+		synchronize ;;
 esac
 
