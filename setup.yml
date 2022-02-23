@@ -20,6 +20,7 @@
     - matrix-bridge-appservice-irc
     - matrix-bridge-beeper-linkedin
     - matrix-bridge-mautrix-facebook
+    - matrix-bridge-mautrix-twitter
     - matrix-bridge-mautrix-hangouts
     - matrix-bridge-mautrix-googlechat
     - matrix-bridge-mautrix-instagram
@@ -35,10 +36,13 @@
     - matrix-bridge-mx-puppet-instagram
     - matrix-bridge-sms
     - matrix-bridge-heisenbridge
+    - matrix-bridge-hookshot
     - matrix-bot-matrix-reminder-bot
+    - matrix-bot-honoroit
     - matrix-bot-go-neb
     - matrix-bot-mjolnir
     - matrix-synapse
+    - matrix-dendrite
     - matrix-synapse-admin
     - matrix-prometheus-node-exporter
     - matrix-prometheus
@@ -46,6 +50,7 @@
     - matrix-registration
     - matrix-client-element
     - matrix-client-hydrogen
+    - matrix-client-cinny
     - matrix-jitsi
     - matrix-ma1sd
     - matrix-dimension

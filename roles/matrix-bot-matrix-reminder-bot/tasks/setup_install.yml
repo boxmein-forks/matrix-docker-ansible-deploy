@@ -34,10 +34,10 @@
     owner: "{{ matrix_user_username }}"
     group: "{{ matrix_user_groupname }}"
   with_items:
-    - { path: "{{ matrix_bot_matrix_reminder_bot_config_path }}", when: true }
-    - { path: "{{ matrix_bot_matrix_reminder_bot_data_path }}", when: true }
-    - { path: "{{ matrix_bot_matrix_reminder_bot_data_store_path }}", when: true }
-    - { path: "{{ matrix_bot_matrix_reminder_bot_docker_src_files_path }}", when: true}
+    - {path: "{{ matrix_bot_matrix_reminder_bot_config_path }}", when: true}
+    - {path: "{{ matrix_bot_matrix_reminder_bot_data_path }}", when: true}
+    - {path: "{{ matrix_bot_matrix_reminder_bot_data_store_path }}", when: true}
+    - {path: "{{ matrix_bot_matrix_reminder_bot_docker_src_files_path }}", when: true}
   when: "item.when|bool"
 
 - name: Ensure matrix-reminder-bot image is pulled
@@ -46,7 +46,7 @@
     source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
     force_source: "{{ matrix_bot_matrix_reminder_bot_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_bot_matrix_reminder_bot_docker_image_force_pull }}"
-  when: "not matrix_bot_matrix_reminder_bot_container_self_build|bool"
+  when: "not matrix_bot_matrix_reminder_bot_container_image_self_build|bool"
 
 - name: Ensure matrix-reminder-bot repository is present on self-build
   git:
@@ -54,7 +54,7 @@
     dest: "{{ matrix_bot_matrix_reminder_bot_docker_src_files_path }}"
     force: "yes"
   register: matrix_bot_matrix_reminder_bot_git_pull_results
-  when: "matrix_bot_matrix_reminder_bot_container_self_build|bool"
+  when: "matrix_bot_matrix_reminder_bot_container_image_self_build|bool"
 
 - name: Ensure matrix-reminder-bot image is built
   docker_image:
@@ -65,8 +65,8 @@
     build:
       dockerfile: docker/Dockerfile
       path: "{{ matrix_bot_matrix_reminder_bot_docker_src_files_path }}"
-      pull: yes
-  when: "matrix_bot_matrix_reminder_bot_container_self_build|bool"
+      pull: true
+  when: "matrix_bot_matrix_reminder_bot_container_image_self_build|bool"
 
 - name: Ensure matrix-reminder-bot config installed
   copy:
@@ -85,7 +85,7 @@
 
 - name: Ensure systemd reloaded after matrix-bot-matrix-reminder-bot.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_bot_matrix_reminder_bot_systemd_service_result.changed|bool"
 
 - name: Ensure matrix-bot-matrix-reminder-bot.service restarted, if necessary
