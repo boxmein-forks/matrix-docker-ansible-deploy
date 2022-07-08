@@ -34,7 +34,7 @@ appservice:
     # the HS database.
     public:
         # Whether or not the public-facing endpoints should be enabled.
-        enabled: true
+        enabled: {{ matrix_mautrix_telegram_appservice_public_enabled|to_json }}
         # The prefix to use in the public-facing endpoints.
         prefix: {{ matrix_mautrix_telegram_public_endpoint|to_json }}
         # The base URL where the public-facing endpoints are available. The prefix is not added
@@ -69,13 +69,16 @@ appservice:
 bridge:
     # Localpart template of MXIDs for Telegram users.
     # {userid} is replaced with the user ID of the Telegram user.
-    username_template: "telegram_{userid}"
+    # Default: telegram_{userid}
+    username_template: {{ matrix_mautrix_telegram_username_template|to_json }}
     # Localpart template of room aliases for Telegram portal rooms.
     # {groupname} is replaced with the name part of the public channel/group invite link ( https://t.me/{} )
-    alias_template: "telegram_{groupname}"
+    # Default: telegram_{groupname}
+    alias_template: {{ matrix_mautrix_telegram_alias_template|to_json }}
     # Displayname template for Telegram users.
     # {displayname} is replaced with the display name of the Telegram user.
-    displayname_template: "{displayname} (Telegram)"
+    # Default: {displayname} (Telegram)
+    displayname_template: {{ matrix_mautrix_telegram_displayname_template|to_json }}
 
     # Set the preferred order of user identifiers which to use in the Matrix puppet display name.
     # In the (hopefully unlikely) scenario that none of the given keys are found, the numeric user
@@ -102,11 +105,11 @@ bridge:
     # synced when they send messages. The maximum is 10000, after which the Telegram server
     # will not send any more members.
     # Defaults to no local limit (-> limited to 10000 by server)
-    max_initial_member_sync: -1
+    max_initial_member_sync: 10
     # Whether or not to sync the member list in channels.
     # If no channel admins have logged into the bridge, the bridge won't be able to sync the member
     # list regardless of this setting.
-    sync_channel_members: true
+    sync_channel_members: false
     # Whether or not to skip deleted members when syncing members.
     skip_deleted_members: true
     # Whether or not to automatically synchronize contacts and chats of Matrix users logged into
@@ -157,7 +160,7 @@ bridge:
     parallel_file_transfer: false
     # Whether or not created rooms should have federation enabled.
     # If false, created portal rooms will never be federated.
-    federate_rooms: true
+    federate_rooms: {{ matrix_mautrix_telegram_federate_rooms|to_json }}
     # Settings for converting animated stickers.
     animated_sticker:
         # Format to which animated stickers should be converted.
@@ -199,9 +202,9 @@ bridge:
     private_chat_portal_meta: false
     # Whether or not the bridge should send a read receipt from the bridge bot when a message has
     # been sent to Telegram.
-    delivery_receipts: false
+    delivery_receipts: true
     # Whether or not delivery errors should be reported as messages in the Matrix room.
-    delivery_error_reports: false
+    delivery_error_reports: true
     # Set this to true to tell the bridge to re-send m.bridge events to all rooms on the next run.
     # This field will automatically be changed back to false after it,
     # except if the config file is not writable.
@@ -221,17 +224,6 @@ bridge:
         # e.g. if bridge_notices.default is false, notices from other users will not be bridged, but
         #      notices from users listed here will be bridged.
         exceptions: []
-
-    # Some config options related to Telegram message deduplication.
-    # The default values are usually fine, but some debug messages/warnings might recommend you
-    # change these.
-    deduplication:
-        # Whether or not to check the database if the message about to be sent is a duplicate.
-        pre_db_check: false
-        # The number of latest events to keep when checking for duplicates.
-        # You might need to increase this on high-traffic bridge instances.
-        cache_queue_length: 20
-
 
     # The formats to use when sending messages to Telegram via the relay bot.
     #
@@ -299,6 +291,9 @@ bridge:
     #     mxid - Specific user
     permissions:
       '{{ matrix_mautrix_telegram_homeserver_domain }}': full
+      {% if matrix_admin %}
+      '{{ matrix_admin }}': admin
+      {% endif %}
 
     # Options related to the message relay Telegram bot.
     relaybot:
@@ -409,11 +404,11 @@ logging:
             formatter: precise
     loggers:
         mau:
-            level: DEBUG
+            level: WARNING
         telethon:
-            level: DEBUG
+            level: WARNING
         aiohttp:
-            level: INFO
+            level: WARNING
     root:
-        level: DEBUG
+        level: WARNING
         handlers: [console]

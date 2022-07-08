@@ -1,3 +1,308 @@
+# 2022-06-23
+
+## (Potential Backward Compatibility Break) Changes around metrics collection
+
+**TLDR**: we've made extensive **changes to metrics exposure/collection, which concern people using an external Prometheus server**. If you don't know what that is, you don't need to read below.
+
+**Why do major changes to metrics**? Because various services were exposing metrics in different, hacky, ways. Synapse was exposing metrics at `/_synapse/metrics` and `/_synapse-worker-.../metrics` on the `matrix.DOMAIN`. The Hookshot role was **repurposing** the Granana web UI domain (`stats.DOMAIN`) for exposing its metrics on `stats.DOMAIN/hookshot/metrics`, while protecting these routes using Basic Authentication **normally used for Synapse** (`/_synapse/metrics`). Node-exporter and Postgres-exporter roles were advising for more `stats.DOMAIN` usage in manual ways. Each role was doing things differently and mixing variables from other roles. Each metrics endpoint was ending up in a different place, protected by who knows what Basic Authentication credentials (if protected at all).
+
+**The solution**: a completely revamped way to expose metrics to an external Prometheus server. We are **introducing new `https://matrix.DOMAIN/metrics/*` endpoints**, where various services *can* expose their metrics, for collection by external Prometheus servers. To enable the `/metrics/*` endpoints, use `matrix_nginx_proxy_proxy_matrix_metrics_enabled: true`. There's also a way to protect access using [Basic Authentication](https://en.wikipedia.org/wiki/Basic_access_authentication). See the `matrix-nginx-proxy` role or our [Collecting metrics to an external Prometheus server](docs/configuring-playbook-prometheus-grafana.md#collecting-metrics-to-an-external-prometheus-server) documentation for additional variables around `matrix_nginx_proxy_proxy_matrix_metrics_enabled`.
+
+**If you are using the [Hookshot bridge](docs/configuring-playbook-bridge-hookshot.md)**, you may find that:
+1. **Metrics may not be enabled by default anymore**:
+  - If Prometheus is enabled (`matrix_prometheus_enabled: true`), then Hookshot metrics will be enabled automatically (`matrix_hookshot_metrics_enabled: true`). These metrics will be collected from the local (in-container) Prometheus over the container network.
+  - **If Prometheus is not enabled** (you are either not using Prometheus or are using an external one), **Hookshot metrics will not be enabled by default anymore**. Feel free to enable them by setting `matrix_hookshot_metrics_enabled: true`. Also, see below.
+2. When metrics are meant to be **consumed by an external Prometheus server**, `matrix_hookshot_metrics_proxying_enabled` needs to be set to `true`, so that metrics would be exposed (proxied) "publicly" on `https://matrix.DOMAIN/metrics/hookshot`. To make use of this, you'll also need to enable the new `https://matrix.DOMAIN/metrics/*` endpoints mentioned above, using `matrix_nginx_proxy_proxy_matrix_metrics_enabled`. Learn more in our [Collecting metrics to an external Prometheus server](docs/configuring-playbook-prometheus-grafana.md#collecting-metrics-to-an-external-prometheus-server) documentation.
+3. **We've changed the URL we're exposing Hookshot metrics at** for external Prometheus servers. Until now, you were advised to consume Hookshot metrics from `https://stats.DOMAIN/hookshot/metrics` (working in conjunction with `matrix_nginx_proxy_proxy_synapse_metrics`). From now on, **this no longer works**. As described above, you need to start consuming metrics from `https://matrix.DOMAIN/metrics/hookshot`.
+
+**If you're using node-exporter** (`matrix_prometheus_node_exporter_enabled: true`) and would like to collect its metrics from an external Prometheus server, see `matrix_prometheus_node_exporter_metrics_proxying_enabled` described in our [Collecting metrics to an external Prometheus server](docs/configuring-playbook-prometheus-grafana.md#collecting-metrics-to-an-external-prometheus-server) documentation. You will be able to collect its metrics from `https://matrix.DOMAIN/metrics/node-exporter`.
+
+**If you're using [postgres-exporter](docs/configuring-playbook-prometheus-postgres.md)** (`matrix_prometheus_postgres_exporter_enabled: true`) and would like to collect its metrics from an external Prometheus server, see `matrix_prometheus_postgres_exporter_metrics_proxying_enabled` described in our [Collecting metrics to an external Prometheus server](docs/configuring-playbook-prometheus-grafana.md#collecting-metrics-to-an-external-prometheus-server) documentation. You will be able to collect its metrics from `https://matrix.DOMAIN/metrics/postgres-exporter`.
+
+**If you're using Synapse** and would like to collect its metrics from an external Prometheus server, you may find that:
+
+1. Exposing metrics is now done using `matrix_synapse_metrics_proxying_enabled`, not `matrix_nginx_proxy_proxy_synapse_metrics: true`. You may still need to enable metrics using `matrix_synapse_metrics_enabled: true` before exposing them.
+2. Protecting metrics endpoints using [Basic Authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) is now done in another way. See our [Collecting metrics to an external Prometheus server](docs/configuring-playbook-prometheus-grafana.md#collecting-metrics-to-an-external-prometheus-server) documentation
+3. If Synapse metrics are exposed, they will be made available at `https://matrix.DOMAIN/metrics/synapse/main-process` or `https://matrix.DOMAIN/metrics/synapse/worker/TYPE-ID` (when workers are enabled), not at `https://matrix.DOMAIN/_synapse/metrics` and `https://matrix.DOMAIN/_synapse-worker-.../metrics`
+4. The playbook still generates an `external_prometheus.yml.example` sample file for scraping Synapse from Prometheus as described in [Collecting Synapse worker metrics to an external Prometheus server](docs/configuring-playbook-prometheus-grafana.md#collecting-synapse-worker-metrics-to-an-external-prometheus-server), but it's now saved under `/matrix/synapse` (not `/matrix`).
+
+**If you where already using a external Prometheus server** before this change, and you gave a hashed version of the password as a variable, the playbook will now take care of hashing the password for you. Thus, you need to provide the non-hashed version now. 
+
+# 2022-06-13
+
+## go-skype-bridge bridging support
+
+Thanks to [CyberShadow](https://github.com/CyberShadow), the playbook can now install the [go-skype-bridge](https://github.com/kelaresg/go-skype-bridge) bridge for bridging Matrix to [Skype](https://www.skype.com/).
+
+See our [Setting up Go Skype Bridge](docs/configuring-playbook-bridge-go-skype-bridge.md) documentation to get started.
+
+The playbook has supported [mx-puppet-skype](https://github.com/Sorunome/mx-puppet-skype) bridging (see [Setting up MX Puppet Skype bridging](docs/configuring-playbook-bridge-mx-puppet-skype.md)) since [2020-04-09](#2020-04-09), but `mx-puppet-skype` is reportedly broken.
+
+
+# 2022-06-09
+
+## Running Ansible in a container can now happen on the Matrix server itself
+
+If you're tired of being on an old and problematic Ansible version, you can now run [run Ansible in a container on the Matrix server itself](docs/ansible.md#running-ansible-in-a-container-on-the-matrix-server-itself).
+
+
+# 2022-05-31
+
+## Synapse v1.60 upgrade may cause trouble and require manual intervention
+
+Synapse v1.60 will try to add a new unique index to `state_group_edges` upon startup and could fail if your database is corrupted.
+
+We haven't observed this problem yet, but [the Synapse v1.60.0 upgrade notes](https://github.com/matrix-org/synapse/blob/v1.60.0/docs/upgrade.md#adding-a-new-unique-index-to-state_group_edges-could-fail-if-your-database-is-corrupted) mention it, so we're giving you a heads up here in case you're unlucky.
+
+**If Synapse fails to start** after your next playbook run, you'll need to:
+
+- SSH into the Matrix server
+- launch `/usr/local/bin/matrix-postgres-cli`
+- switch to the `synapse` database: `\c synapse`
+- run the following SQL query:
+
+```sql
+BEGIN;
+DELETE FROM state_group_edges WHERE (ctid, state_group, prev_state_group) IN (
+  SELECT row_id, state_group, prev_state_group
+  FROM (
+    SELECT
+      ctid AS row_id,
+      MIN(ctid) OVER (PARTITION BY state_group, prev_state_group) AS min_row_id,
+      state_group,
+      prev_state_group
+    FROM state_group_edges
+  ) AS t1
+  WHERE row_id <> min_row_id
+);
+COMMIT;
+```
+
+You could then restart services: `ansible-playbook -i inventory/hosts setup.yml --tags=start`
+
+
+# 2022-04-25
+
+## buscarron bot support
+
+Thanks to [Aine](https://gitlab.com/etke.cc) of [etke.cc](https://etke.cc/), the playbook can now set up [the Buscarron bot](https://gitlab.com/etke.cc/buscarron). It's a bot you can use to send any form (HTTP POST, HTML) to a (encrypted) Matrix room
+
+See our [Setting up Buscarron](docs/configuring-playbook-bot-buscarron.md) documentation to get started.
+
+
+# 2022-04-21
+
+## matrix-registration-bot support
+
+Thanks to [Julian-Samuel Gebühr (@moan0s)](https://github.com/moan0s), the playbook can now help you set up [matrix-registration-bot](https://github.com/moan0s/matrix-registration-bot) - a bot that is used to create and manage registration tokens for a Matrix server.
+
+See our [Setting up matrix-registration-bot](docs/configuring-playbook-bot-matrix-registration-bot.md) documentation to get started.
+
+
+# 2022-04-19
+
+## Borg backup support
+
+Thanks to [Aine](https://gitlab.com/etke.cc) of [etke.cc](https://etke.cc/), the playbook can now set up [Borg](https://www.borgbackup.org/) backups with [borgmatic](https://torsion.org/borgmatic/) of your Matrix server.
+
+See our [Setting up borg backup](docs/configuring-playbook-backup-borg.md) documentation to get started.
+
+
+## (Compatibility Break) Upgrading to Synapse v1.57 on setups using workers may require manual action
+
+If you're running a worker setup for Synapse (`matrix_synapse_workers_enabled: true`), the [Synapse v1.57 upgrade notes](https://github.com/matrix-org/synapse/blob/v1.57.0rc1/docs/upgrade.md#changes-to-database-schema-for-application-services) say that you may need to take special care when upgrading:
+
+> Synapse v1.57.0 includes a change to the way transaction IDs are managed for application services. If your deployment uses a dedicated worker for application service traffic, **it must be stopped** when the database is upgraded (which normally happens when the main process is upgraded), to ensure the change is made safely without any risk of reusing transaction IDs.
+
+If you're not running an `appservice` worker (`matrix_synapse_workers_preset: little-federation-helper` or `matrix_synapse_workers_appservice_workers_count: 0`), you are probably safe to upgrade as per normal, without taking any special care.
+
+If you are running a setup with an `appservice` worker, or otherwise want to be on the safe side, we recommend the following upgrade path:
+
+0. Pull the latest playbook changes
+1. Stop all services (`ansible-playbook -i inventory/hosts setup.yml --tags=stop`)
+2. Re-run the playbook (`ansible-playbook -i inventory/hosts setup.yml --tags=setup-all`)
+3. Start Postgres (`systemctl start matrix-postgres` on the server)
+4. Start the main Synapse process (`systemctl start matrix-synapse` on the server)
+5. Wait a while so that Synapse can start and complete the database migrations. You can use `journalctl -fu matrix-synapse` on the server to get a clue. Waiting a few minutes should also be enough.
+6. It should now be safe to start all other services. `ansible-playbook -i inventory/hosts setup.yml --tags=start` will do it for you
+
+
+# 2022-04-14
+
+## (Compatibility Break) Changes to `docker-src` permissions necessitating manual action
+
+Users who build container images from source will need to manually correct file permissions of some directories on the server.
+
+When self-building, the playbook used to `git clone` repositories (into `/matrix/SERVICE/docker-src`) using the `root` user, but now uses `matrix` instead to work around [the following issue with git 2.35.2](https://github.com/spantaleev/matrix-docker-ansible-deploy/issues/1749).
+
+If you're on a non-`amd64` architecture (that is, you're overriding `matrix_architecture` in your `vars.yml` file) or you have enabled self-building for some service (e.g. `matrix_*_self_build: true`), you're certainly building some container images from source and have `docker-src` directories with mixed permissions lying around in various `/matrix/SERVICE` directories.
+
+The playbook *could* correct these permissions automatically, but that requires additional Ansible tasks in some ~45 different places - something that takes considerable effort. So we ask users observing errors related to `docker-src` directories to correct the problem manually by **running this command on the Matrix server** (which deletes all `/matrix/*/docker-src` directories): `find /matrix -maxdepth 2 -name 'docker-src' | xargs rm -rf`
+
+
+# 2022-03-17
+
+## (Compatibility Break) ma1sd identity server no longer installed by default
+
+The playbook no longer installs the [ma1sd](https://github.com/ma1uta/ma1sd) identity server by default. The next time you run the playbook, ma1sd will be uninstalled from your server, unless you explicitly enable the ma1sd service (see how below).
+
+The main reason we used to install ma1sd by default in the past was to prevent Element from talking to the `matrix.org` / `vector.im` identity servers, by forcing it to talk to our own self-hosted (but otherwise useless) identity server instead, thus preventing contact list leaks.
+
+Since Element no longer defaults to using a public identity server if another one is not provided, we can stop installing ma1sd.
+
+If you need to install the ma1sd identity server for some reason, you can explicitly enable it by adding this to your `vars.yml` file:
+
+```yaml
+matrix_ma1sd_enabled: true
+```
+
+
+# 2022-02-12
+
+## matrix_encryption_disabler support
+
+We now support installing the [matrix_encryption_disabler](https://github.com/digitalentity/matrix_encryption_disabler) Synapse module, which lets you prevent End-to-End-Encryption from being enabled by users on your homeserver. The popular opinion is that this is dangerous and shouldn't be done, but there are valid use cases for disabling encryption discussed [here](https://github.com/matrix-org/synapse/issues/4401).
+
+To enable this module (and prevent encryption from being used on your homserver), add `matrix_synapse_ext_encryption_disabler_enabled: true` to your configuration. This module provides further customization. Check its other configuration settings (and defaults) in `roles/matrix-synapse/defaults/main.yml`.
+
+
+# 2022-02-01
+
+## matrix-hookshot bridging support
+
+Thanks to [HarHarLinks](https://github.com/HarHarLinks), the playbook can now install the [matrix-hookshot](https://github.com/Half-Shot/matrix-hookshot) bridge for bridging Matrix to multiple project management services, such as GitHub, GitLab and JIRA.
+See our [Setting up matrix-hookshot](docs/configuring-playbook-bridge-hookshot.md) documentation to get started.
+
+
+# 2022-01-31
+
+## ARM support for matrix-corporal
+
+[matrix-corporal](https://github.com/devture/matrix-corporal) (as of version `2.2.3`) is now published to Docker Hub (see [devture/matrix-corporal](https://hub.docker.com/r/devture/matrix-corporal)) as a multi-arch container image with support for all these platforms: `linux/amd64`, `linux/arm64/v8` and `linux/arm/v7`. The playbook no longer resorts to self-building matrix-corporal on these ARM architectures.
+
+
+# 2022-01-07
+
+## Dendrite support
+
+**TLDR**: We now have optional experimental [Dendrite](https://github.com/matrix-org/dendrite) homeserver support for new installations. **Existing (Synapse) installations need to be updated**, because some internals changed. See [Adapting the configuration for existing Synapse installations](#adapting-the-configuration-for-existing-synapse-installations).
+
+[Jip J. Dekker](https://github.com/Dekker1) did the [initial work](https://github.com/spantaleev/matrix-docker-ansible-deploy/pull/818) of adding [Dendrite](https://github.com/matrix-org/dendrite) support to the playbook back in January 2021. Lots of work (and time) later, Dendrite support is finally ready for testing.
+
+We believe that 2022 will be the year of the non-Synapse Matrix server!
+
+The playbook was previously quite [Synapse](https://github.com/matrix-org/synapse)-centric, but can now accommodate multiple homeserver implementations. Only one homeserver implementation can be active (installed) at a given time.
+
+**Synapse is still the default homeserver implementation** installed by the playbook. A new variable (`matrix_homeserver_implementation`) controls which server implementation is enabled (`synapse` or `dendrite` at the given moment).
+
+### Adapting the configuration for existing Synapse installations
+
+Because the playbook is not so Synapse-centric anymore, a small configuration change is necessary for existing installations to bring them up to date.
+
+The `vars.yml` file for **existing installations will need to be updated** by adding this **additional configuration**:
+
+```yaml
+# All secrets keys are now derived from `matrix_homeserver_generic_secret_key`, not from `matrix_synapse_macaroon_secret_key`.
+# To keep them all the same, define `matrix_homeserver_generic_secret_key` in terms of `matrix_synapse_macaroon_secret_key`.
+# Using a new secret value for this configuration key is also possible and should not cause any problems.
+#
+# Fun fact: new installations (based on the new `examples/vars.yml` file) do this in reverse.
+# That is, the Synapse macaroon secret is derived from `matrix_homeserver_generic_secret_key`.
+matrix_homeserver_generic_secret_key: "{{ matrix_synapse_macaroon_secret_key }}"
+```
+
+### Trying out Dendrite
+
+Finally, **to try out Dendrite**, we recommend that you **use a new server** and the following addition to your `vars.yml` configuration:
+
+```yaml
+matrix_homeserver_implementation: dendrite
+```
+
+**The homeserver implementation of an existing server cannot be changed** (e.g. from Synapse to Dendrite) without data loss.
+
+We're excited to gain support for other homeserver implementations, like [Conduit](https://conduit.rs/), etc!
+
+
+## Honoroit bot support
+
+Thanks to [Aine](https://gitlab.com/etke.cc) of [etke.cc](https://etke.cc/), the playbook can now help you set up [Honoroit](https://gitlab.com/etke.cc/honoroit) - a helpdesk bot.
+
+See our [Setting up Honoroit](docs/configuring-playbook-bot-honoroit.md) documentation to get started.
+
+
+# 2022-01-06
+
+## Cinny support
+
+Thanks to [Aine](https://gitlab.com/etke.cc) of [etke.cc](https://etke.cc/), the playbook now supports [Cinny](https://cinny.in/) - a new simple, elegant and secure Matrix client.
+
+By default, we still install Element. Still, people who'd like to try Cinny out can now install it via the playbook.
+
+Additional details are available in [Setting up Cinny](docs/configuring-playbook-client-cinny.md).
+
+
+# 2021-12-22
+
+## Twitter bridging support via mautrix-twitter
+
+Thanks to [Matthew Cengia](https://github.com/mattcen) and [Shreyas Ajjarapu](https://github.com/shreyasajj), besides [mx-puppet-twitter](docs/configuring-playbook-bridge-mx-puppet-twitter.md), bridging to [Twitter](https://twitter.com/) can now also happen with [mautrix-twitter](docs/configuring-playbook-bridge-mautrix-twitter.md).
+
+
+# 2021-12-14
+
+## (Security) Users of the Signal bridge may wish to upgrade it to work around log4j vulnerability
+
+Recently, a security vulnerability affecting the Java logging package `log4j` [has been discovered](https://www.huntress.com/blog/rapid-response-critical-rce-vulnerability-is-affecting-java). Software that uses this Java package is potentially vulnerable.
+
+One such piece of software that is part of the playbook is the [mautrix-signal bridge](./docs/configuring-playbook-bridge-mautrix-signal.md), which [has been patched already](https://github.com/spantaleev/matrix-docker-ansible-deploy/pull/1452). If you're running this bridge, you may wish to [upgrade](./docs/maintenance-upgrading-services.md).
+
+
+# 2021-11-11
+
+## Dropped support for Postgres v9.6
+
+Postgres v9.6 reached its end of life today, so the playbook will refuse to run for you if you're still on that version.
+
+Synapse still supports v9.6 (for now), but we're retiring support for it early, to avoid having to maintain support for so many Postgres versions. Users that are still on Postgres v9.6 can easily [upgrade Postgres](docs/maintenance-postgres.md#upgrading-postgresql) via the playbook.
+
+
+# 2021-10-23
+
+## Hangouts bridge no longer updated, superseded by a Googlechat bridge
+
+The mautrix-hangouts bridge is no longer receiving updates upstream and is likely to stop working in the future.
+We still retain support for this bridge in the playbook, but you're encouraged to switch away from it.
+
+There's a new [mautrix-googlechat](https://github.com/mautrix/googlechat) bridge that you can [install using the playbook](docs/configuring-playbook-bridge-mautrix-googlechat.md).
+Your **Hangouts bridge data will not be migrated**, however. You need to start fresh with the new bridge.
+
+
+# 2021-08-23
+
+## LinkedIn bridging support via beeper-linkedin
+
+Thanks to [Alexandar Mechev](https://github.com/apmechev), the playbook can now install the [beeper-linkedin](https://gitlab.com/beeper/linkedin) bridge for bridging to [LinkedIn](https://www.linkedin.com/) Messaging.
+
+This brings the total number of bridges supported by the playbook up to 20. See all supported bridges [here](docs/configuring-playbook.md#bridging-other-networks).
+
+To get started with bridging to LinkedIn, see [Setting up Beeper LinkedIn bridging](docs/configuring-playbook-bridge-beeper-linkedin.md).
+
+
+# 2021-08-20
+
+# Sygnal upgraded - ARM support and no longer requires a database
+
+The [Sygnal](docs/configuring-playbook-sygnal.md) push gateway has been upgraded from `v0.9.0` to `v0.10.1`.
+
+This is an optional component for the playbook, so most of our users wouldn't care about this announcement.
+
+Since this feels like a relatively big (and untested, as of yet) Sygnal change, we're putting up this changelog entry.
+
+The new version is also available for the ARM architecture. It also no longer requires a database anymore.
+If you need to downgrade to the previous version, changing `matrix_sygnal_version` or `matrix_sygnal_docker_image` will not be enough, as we've removed the `database` configuration completely. You'd need to switch to an earlier playbook commit.
+
+
 # 2021-05-21
 
 ## Hydrogen support
@@ -207,6 +512,8 @@ The fact that we've renamed Synapse's database from `homeserver` to `synapse` (i
 # 2021-01-20
 
 ## (Breaking Change) The mautrix-facebook bridge now requires a Postgres database
+
+**Update from 2021-11-15**: SQLite support has been re-added to the mautrix-facebook bridge in [v0.3.2](https://github.com/mautrix/facebook/releases/tag/v0.3.2). You can ignore this changelog entry.
 
 A new version of the [mautrix-facebook](https://github.com/tulir/mautrix-facebook) bridge has been released. It's a full rewrite of its backend and the bridge now requires Postgres. New versions of the bridge can no longer run on SQLite.
 

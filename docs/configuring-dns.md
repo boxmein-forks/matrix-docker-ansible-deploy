@@ -31,12 +31,14 @@ If you are using Cloudflare DNS, make sure to disable the proxy and set all reco
 | Type  | Host                         | Priority | Weight | Port | Target                 |
 | ----- | ---------------------------- | -------- | ------ | ---- | ---------------------- |
 | SRV   | `_matrix-identity._tcp`      | 10       | 0      | 443  | `matrix.<your-domain>` |
-| CNAME | `dimension` (*)              | -        | -      | -    | `matrix.<your-domain>` |
-| CNAME | `jitsi` (*)                  | -        | -      | -    | `matrix.<your-domain>` |
-| CNAME | `stats` (*)                  | -        | -      | -    | `matrix.<your-domain>` |
-| CNAME | `goneb` (*)                  | -        | -      | -    | `matrix.<your-domain>` |
-| CNAME | `sygnal` (*)                 | -        | -      | -    | `matrix.<your-domain>` |
-| CNAME | `hydrogen` (*)               | -        | -      | -    | `matrix.<your-domain>` |
+| CNAME | `dimension`                  | -        | -      | -    | `matrix.<your-domain>` |
+| CNAME | `jitsi`                      | -        | -      | -    | `matrix.<your-domain>` |
+| CNAME | `stats`                      | -        | -      | -    | `matrix.<your-domain>` |
+| CNAME | `goneb`                      | -        | -      | -    | `matrix.<your-domain>` |
+| CNAME | `sygnal`                     | -        | -      | -    | `matrix.<your-domain>` |
+| CNAME | `hydrogen`                   | -        | -      | -    | `matrix.<your-domain>` |
+| CNAME | `cinny`                      | -        | -      | -    | `matrix.<your-domain>` |
+| CNAME | `buscarron`                  | -        | -      | -    | `matrix.<your-domain>` |
 
 ## Subdomains setup
 
@@ -57,15 +59,18 @@ The `sygnal.<your-domain>` subdomain may be necessary, because this playbook cou
 
 The `hydrogen.<your-domain>` subdomain may be necessary, because this playbook could install the [Hydrogen](https://github.com/vector-im/hydrogen-web) web client. The installation of Hydrogen is disabled by default, it is not a core required component. To learn how to install it, see our [configuring Hydrogen guide](configuring-playbook-client-hydrogen.md). If you do not wish to set up Hydrogen, feel free to skip the `hydrogen.<your-domain>` DNS record.
 
+The `cinny.<your-domain>` subdomain may be necessary, because this playbook could install the [Cinny](https://github.com/ajbura/cinny) web client. The installation of cinny is disabled by default, it is not a core required component. To learn how to install it, see our [configuring cinny guide](configuring-playbook-client-cinny.md). If you do not wish to set up cinny, feel free to skip the `cinny.<your-domain>` DNS record.
+
+The `buscarron.<your-domain>` subdomain may be necessary, because this playbook could install the [buscarron](https://github.com/etke.cc/buscarron) bot. The installation of buscarron is disabled by default, it is not a core required component. To learn how to install it, see our [configuring buscarron guide](configuring-playbook-bot-buscarron.md). If you do not wish to set up buscarron, feel free to skip the `buscarron.<your-domain>` DNS record.
 
 ## `_matrix-identity._tcp` SRV record setup
 
-To make the [ma1sd](https://github.com/ma1uta/ma1sd) Identity Server (which this playbook installs for you) enable its federation features, set up an SRV record that looks like this:
+To make the [ma1sd](https://github.com/ma1uta/ma1sd) Identity Server (which this playbook may optionally install for you) enable its federation features, set up an SRV record that looks like this:
 - Name: `_matrix-identity._tcp` (use this text as-is)
 - Content: `10 0 443 matrix.<your-domain>` (replace `<your-domain>` with your own)
 
-This is an optional feature. See [ma1sd's documentation](https://github.com/ma1uta/ma1sd/wiki/mxisd-and-your-privacy#choices-are-never-easy) for information on the privacy implications of setting up this SRV record.
+This is an optional feature for the optionally-installed [ma1sd service](configuring-playbook-ma1sd.md). See [ma1sd's documentation](https://github.com/ma1uta/ma1sd/wiki/mxisd-and-your-privacy#choices-are-never-easy) for information on the privacy implications of setting up this SRV record.
 
 Note: This `_matrix-identity._tcp` SRV record for the identity server is different from the `_matrix._tcp` that can be used for Synapse delegation. See [howto-server-delegation.md](howto-server-delegation.md) for more information about delegation.
 
-When you're done with the DNS configuration and ready to proceed, continue with [Configuring this Ansible playbook](configuring-playbook.md).
+When you're done with the DNS configuration and ready to proceed, continue with [Getting the playbook](getting-the-playbook.md).

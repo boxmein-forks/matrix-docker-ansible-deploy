@@ -16,10 +16,10 @@
     owner: "{{ matrix_user_username }}"
     group: "{{ matrix_user_groupname }}"
   with_items:
-    - { path: "{{ matrix_mx_puppet_discord_base_path }}", when: true }
-    - { path: "{{ matrix_mx_puppet_discord_config_path }}", when: true }
-    - { path: "{{ matrix_mx_puppet_discord_data_path }}", when: true }
-    - { path: "{{ matrix_mx_puppet_discord_docker_src_files_path }}", when: "{{ matrix_mx_puppet_discord_container_image_self_build }}" }
+    - {path: "{{ matrix_mx_puppet_discord_base_path }}", when: true}
+    - {path: "{{ matrix_mx_puppet_discord_config_path }}", when: true}
+    - {path: "{{ matrix_mx_puppet_discord_data_path }}", when: true}
+    - {path: "{{ matrix_mx_puppet_discord_docker_src_files_path }}", when: "{{ matrix_mx_puppet_discord_container_image_self_build }}"}
   when: matrix_mx_puppet_discord_enabled|bool and item.when|bool
 
 - name: Check if an old database file already exists
@@ -32,8 +32,8 @@
       service:
         name: matrix-mx-puppet-discord
         state: stopped
-        daemon_reload: yes
-      failed_when: False
+        daemon_reload: true
+      failed_when: false
 
     - name: (Data relocation) Move mx-puppet-discord database file to ./data directory
       command: "mv {{ matrix_mx_puppet_discord_base_path }}/database.db {{ matrix_mx_puppet_discord_data_path }}/database.db"
@@ -72,12 +72,19 @@
     force_source: "{{ matrix_mx_puppet_discord_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_mx_puppet_discord_docker_image_force_pull }}"
   when: matrix_mx_puppet_discord_enabled|bool and not matrix_mx_puppet_discord_container_image_self_build
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 - name: Ensure MX Puppet Discord repository is present on self build
   git:
     repo: "{{ matrix_mx_puppet_discord_container_image_self_build_repo }}"
     dest: "{{ matrix_mx_puppet_discord_docker_src_files_path }}"
     force: "yes"
+    version: "{{ matrix_mx_puppet_discord_container_image_self_build_version }}"
+  become: true
+  become_user: "{{ matrix_user_username }}"
   register: matrix_mx_puppet_discord_git_pull_results
   when: "matrix_mx_puppet_discord_enabled|bool and matrix_mx_puppet_discord_container_image_self_build"
 
@@ -88,14 +95,14 @@
     force_source: "{{ matrix_mx_puppet_discord_git_pull_results.changed if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_mx_puppet_discord_git_pull_results.changed }}"
     build:
-      dockerfile: Dockerfile
+      dockerfile: "{{ matrix_mx_puppet_discord_container_image_self_build_dockerfile_path }}"
       path: "{{ matrix_mx_puppet_discord_docker_src_files_path }}"
-      pull: yes
+      pull: true
   when: "matrix_mx_puppet_discord_enabled|bool and matrix_mx_puppet_discord_container_image_self_build|bool"
 
 - name: Ensure mx-puppet-discord config.yaml installed
   copy:
-    content: "{{ matrix_mx_puppet_discord_configuration|to_nice_yaml }}"
+    content: "{{ matrix_mx_puppet_discord_configuration|to_nice_yaml(indent=2, width=999999) }}"
     dest: "{{ matrix_mx_puppet_discord_config_path }}/config.yaml"
     mode: 0644
     owner: "{{ matrix_user_username }}"
@@ -103,7 +110,7 @@
 
 - name: Ensure mx-puppet-discord discord-registration.yaml installed
   copy:
-    content: "{{ matrix_mx_puppet_discord_registration|to_nice_yaml }}"
+    content: "{{ matrix_mx_puppet_discord_registration|to_nice_yaml(indent=2, width=999999) }}"
     dest: "{{ matrix_mx_puppet_discord_config_path }}/registration.yaml"
     mode: 0644
     owner: "{{ matrix_user_username }}"
@@ -118,7 +125,7 @@
 
 - name: Ensure systemd reloaded after matrix-mx-puppet-discord.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_mx_puppet_discord_systemd_service_result.changed"
 
 - name: Ensure matrix-mx-puppet-discord.service restarted, if necessary

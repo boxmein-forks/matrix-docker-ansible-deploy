@@ -11,6 +11,10 @@
     force_source: "{{ matrix_prometheus_postgres_exporter_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_prometheus_postgres_exporter_docker_image_force_pull }}"
   when: "matrix_prometheus_postgres_exporter_enabled|bool"
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 - name: Ensure matrix-prometheus-postgres-exporter.service installed
   template:
@@ -22,7 +26,7 @@
 
 - name: Ensure systemd reloaded after matrix-prometheus.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_prometheus_postgres_exporter_enabled|bool and matrix_prometheus_postgres_exporter_systemd_service_result.changed"
 
 #
@@ -38,7 +42,8 @@
   service:
     name: matrix-prometheus-postgres-exporter
     state: stopped
-    daemon_reload: yes
+    enabled: false
+    daemon_reload: true
   register: stopping_result
   when: "not matrix_prometheus_postgres_exporter_enabled|bool and matrix_prometheus_postgres_exporter_service_stat.stat.exists"
 
@@ -50,5 +55,5 @@
 
 - name: Ensure systemd reloaded after matrix-prometheus-postgres-exporter.service removal
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "not matrix_prometheus_postgres_exporter_enabled|bool and matrix_prometheus_postgres_exporter_service_stat.stat.exists"

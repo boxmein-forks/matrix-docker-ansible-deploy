@@ -1,3 +1,4 @@
+---
 # Pre-checks
 
 - name: Fail if Postgres not enabled
@@ -10,17 +11,17 @@
 
 - name: Set matrix_synapse_rust_synapse_compress_state_find_rooms_command_wait_time, if not provided
   set_fact:
-    matrix_synapse_rust_synapse_compress_state_find_rooms_command_wait_time: 300
+    matrix_synapse_rust_synapse_compress_state_find_rooms_command_wait_time: 1800
   when: "matrix_synapse_rust_synapse_compress_state_find_rooms_command_wait_time|default('') == ''"
 
 - name: Set matrix_synapse_rust_synapse_compress_state_compress_room_time, if not provided
   set_fact:
-    matrix_synapse_rust_synapse_compress_state_compress_room_time: 1800
+    matrix_synapse_rust_synapse_compress_state_compress_room_time: 3600
   when: "matrix_synapse_rust_synapse_compress_state_compress_room_time|default('') == ''"
 
 - name: Set matrix_synapse_rust_synapse_compress_state_psql_import_time, if not provided
   set_fact:
-    matrix_synapse_rust_synapse_compress_state_psql_import_time: 1800
+    matrix_synapse_rust_synapse_compress_state_psql_import_time: 3600
   when: "matrix_synapse_rust_synapse_compress_state_psql_import_time|default('') == ''"
 
 - name: Set matrix_synapse_rust_synapse_compress_state_min_state_groups_required, if not provided
@@ -47,6 +48,10 @@
     source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
     force_source: "{{ matrix_synapse_rust_synapse_compress_state_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_synapse_rust_synapse_compress_state_docker_image_force_pull }}"
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 - name: Generate rust-synapse-compress-state room find command
   set_fact:
@@ -80,12 +85,12 @@
 # Row 3 contains a space when there's no result.
 
 - block:
-  - debug: var="matrix_synapse_rust_synapse_compress_state_find_rooms_command_result"
+    - debug: var="matrix_synapse_rust_synapse_compress_state_find_rooms_command_result"
 
-  - name: Fail if room find result is not what we expect
-    fail:
-      msg: >-
-        Expecting 4 lines in the "find rooms" result.
+    - name: Fail if room find result is not what we expect
+      fail:
+        msg: >-
+          Expecting 4 lines in the "find rooms" result.
   when: "matrix_synapse_rust_synapse_compress_state_find_rooms_command_result.failed or matrix_synapse_rust_synapse_compress_state_find_rooms_command_result.stdout_lines|length != 4"
 
 - block:

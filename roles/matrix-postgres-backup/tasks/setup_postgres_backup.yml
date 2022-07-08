@@ -21,6 +21,10 @@
     force_source: "{{ matrix_postgres_backup_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_postgres_backup_docker_image_force_pull }}"
   when: matrix_postgres_backup_enabled|bool
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 - name: Ensure Postgres backup paths exist
   file:
@@ -37,6 +41,8 @@
   template:
     src: "{{ role_path }}/templates/{{ item }}.j2"
     dest: "{{ matrix_postgres_backup_path }}/{{ item }}"
+    owner: "{{ matrix_user_username }}"
+    group: "{{ matrix_user_groupname }}"
     mode: 0640
   with_items:
     - "env-postgres-backup"
@@ -52,7 +58,7 @@
 
 - name: Ensure systemd reloaded after matrix-postgres-backup.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_postgres_backup_enabled|bool and matrix_postgres_backup_systemd_service_result.changed"
 
 #
@@ -69,7 +75,8 @@
   service:
     name: matrix-postgres-backup
     state: stopped
-    daemon_reload: yes
+    enabled: false
+    daemon_reload: true
   when: "not matrix_postgres_backup_enabled|bool and matrix_postgres_backup_service_stat.stat.exists"
 
 - name: Ensure matrix-postgres-backup.service doesn't exist
@@ -80,7 +87,7 @@
 
 - name: Ensure systemd reloaded after matrix-postgres-backup.service removal
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "not matrix_postgres_backup_enabled|bool and matrix_postgres_backup_service_stat.stat.exists"
 
 - name: Check existence of matrix-postgres-backup backup path

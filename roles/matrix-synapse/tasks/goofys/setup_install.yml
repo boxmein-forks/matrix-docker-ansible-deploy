@@ -1,16 +1,24 @@
+---
+
+- import_tasks: "{{ role_path }}/../matrix-base/tasks/util/ensure_fuse_installed.yml"
+
 - name: Ensure Goofys Docker image is pulled
   docker_image:
     name: "{{ matrix_s3_goofys_docker_image }}"
     source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
     force_source: "{{ matrix_s3_goofys_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_s3_goofys_docker_image_force_pull }}"
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 # This will throw a Permission Denied error if already mounted
 - name: Check Matrix Goofys external storage mountpoint path
   stat:
     path: "{{ matrix_s3_media_store_path }}"
   register: local_path_matrix_s3_media_store_path_stat
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Ensure Matrix Goofys external storage mountpoint exists
   file:
@@ -37,5 +45,5 @@
 
 - name: Ensure systemd reloaded after matrix-goofys.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_goofys_systemd_service_result.changed"

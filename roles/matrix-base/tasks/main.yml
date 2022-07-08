@@ -1,3 +1,5 @@
+---
+
 - import_tasks: "{{ role_path }}/tasks/sanity_check.yml"
   tags:
     - always
@@ -31,4 +33,5 @@
     - setup-all
     - setup-ma1sd
     - setup-synapse
+    - setup-dendrite
     - setup-nginx-proxy

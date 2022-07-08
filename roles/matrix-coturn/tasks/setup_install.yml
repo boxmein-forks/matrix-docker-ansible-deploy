@@ -14,7 +14,7 @@
     owner: "{{ matrix_user_username }}"
     group: "{{ matrix_user_groupname }}"
   with_items:
-    - { path: "{{ matrix_coturn_docker_src_files_path }}", when: "{{ matrix_coturn_container_image_self_build }}"}
+    - {path: "{{ matrix_coturn_docker_src_files_path }}", when: "{{ matrix_coturn_container_image_self_build }}"}
   when: "item.when|bool"
 
 - name: Ensure Coturn image is pulled
@@ -24,6 +24,10 @@
     force_source: "{{ matrix_coturn_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_coturn_docker_image_force_pull }}"
   when: "not matrix_coturn_container_image_self_build|bool"
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 - block:
     - name: Ensure Coturn repository is present on self-build
@@ -32,6 +36,8 @@
         dest: "{{ matrix_coturn_docker_src_files_path }}"
         version: "{{ matrix_coturn_container_image_self_build_repo_version }}"
         force: "yes"
+      become: true
+      become_user: "{{ matrix_user_username }}"
       register: matrix_coturn_git_pull_results
 
     - name: Ensure Coturn Docker image is built
@@ -43,7 +49,7 @@
         build:
           dockerfile: "{{ matrix_coturn_container_image_self_build_repo_dockerfile_path }}"
           path: "{{ matrix_coturn_docker_src_files_path }}"
-          pull: yes
+          pull: true
   when: "matrix_coturn_container_image_self_build|bool"
 
 - name: Ensure Coturn configuration path exists
@@ -101,5 +107,5 @@
 
 - name: Ensure systemd reloaded if systemd units changed
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_coturn_systemd_service_change_results.changed"

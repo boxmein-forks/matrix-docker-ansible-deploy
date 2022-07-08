@@ -1,27 +1,57 @@
 ---
 
+- name: Ensure AppService webhooks paths exist
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: 0750
+    owner: "{{ matrix_user_username }}"
+    group: "{{ matrix_user_groupname }}"
+  with_items:
+    - {path: "{{ matrix_appservice_webhooks_base_path }}", when: true}
+    - {path: "{{ matrix_appservice_webhooks_config_path }}", when: true}
+    - {path: "{{ matrix_appservice_webhooks_data_path }}", when: true}
+    - {path: "{{ matrix_appservice_webhooks_docker_src_files_path }}", when: "{{ matrix_appservice_webhooks_container_image_self_build }}"}
+  when: "item.when|bool"
+
 - name: Ensure Appservice webhooks image is pulled
   docker_image:
     name: "{{ matrix_appservice_webhooks_docker_image }}"
     source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
     force_source: "{{ matrix_appservice_webhooks_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_appservice_webhooks_docker_image_force_pull }}"
+  when: "not matrix_appservice_webhooks_container_image_self_build|bool"
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
-- name: Ensure AppService webhooks paths exist
-  file:
-    path: "{{ item }}"
-    state: directory
-    mode: 0750
-    owner: "{{ matrix_user_username }}"
-    group: "{{ matrix_user_groupname }}"
-  with_items:
-    - "{{ matrix_appservice_webhooks_base_path }}"
-    - "{{ matrix_appservice_webhooks_config_path }}"
-    - "{{ matrix_appservice_webhooks_data_path }}"
+- block:
+    - name: Ensure Appservice webhooks repository is present on self-build
+      git:
+        repo: "{{ matrix_appservice_webhooks_container_image_self_build_repo }}"
+        dest: "{{ matrix_appservice_webhooks_docker_src_files_path }}"
+        version: "{{ matrix_appservice_webhooks_container_image_self_build_repo_version }}"
+        force: "yes"
+      become: true
+      become_user: "{{ matrix_user_username }}"
+      register: matrix_appservice_webhooks_git_pull_results
+
+    - name: Ensure Appservice webhooks Docker image is built
+      docker_image:
+        name: "{{ matrix_appservice_webhooks_docker_image }}"
+        source: build
+        force_source: "{{ matrix_appservice_webhooks_git_pull_results.changed if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
+        force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_appservice_webhooks_git_pull_results.changed }}"
+        build:
+          dockerfile: "{{ matrix_appservice_webhooks_container_image_self_build_repo_dockerfile_path }}"
+          path: "{{ matrix_appservice_webhooks_docker_src_files_path }}"
+          pull: true
+  when: "matrix_appservice_webhooks_container_image_self_build|bool"
 
 - name: Ensure Matrix Appservice webhooks config is installed
   copy:
-    content: "{{ matrix_appservice_webhooks_configuration|to_nice_yaml }}"
+    content: "{{ matrix_appservice_webhooks_configuration|to_nice_yaml(indent=2, width=999999) }}"
     dest: "{{ matrix_appservice_webhooks_config_path }}/config.yaml"
     mode: 0644
     owner: "{{ matrix_user_username }}"
@@ -45,7 +75,7 @@
 
 - name: Ensure appservice-webhooks registration.yaml installed
   copy:
-    content: "{{ matrix_appservice_webhooks_registration|to_nice_yaml }}"
+    content: "{{ matrix_appservice_webhooks_registration|to_nice_yaml(indent=2, width=999999) }}"
     dest: "{{ matrix_appservice_webhooks_config_path }}/webhooks-registration.yaml"
     mode: 0644
     owner: "{{ matrix_user_username }}"
@@ -60,5 +90,5 @@
 
 - name: Ensure systemd reloaded after matrix-appservice-webhooks.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_appservice_webhooks_systemd_service_result.changed"

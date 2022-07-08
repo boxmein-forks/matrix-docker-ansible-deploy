@@ -21,8 +21,8 @@ DefaultDependencies=no
 [Service]
 Type=simple
 Environment="HOME={{ matrix_systemd_unit_home_path }}"
-ExecStartPre=-{{ matrix_host_command_sh }} -c '{{ matrix_host_command_docker }} kill matrix-synapse 2>/dev/null'
-ExecStartPre=-{{ matrix_host_command_sh }} -c '{{ matrix_host_command_docker }} rm matrix-synapse 2>/dev/null'
+ExecStartPre=-{{ matrix_host_command_sh }} -c '{{ matrix_host_command_docker }} kill matrix-synapse 2>/dev/null || true'
+ExecStartPre=-{{ matrix_host_command_sh }} -c '{{ matrix_host_command_docker }} rm matrix-synapse 2>/dev/null || true'
 {% if matrix_s3_media_store_enabled %}
 # Allow for some time before starting, so that media store can mount.
 # Mounting can happen later too, but if we start writing,
@@ -33,20 +33,18 @@ ExecStartPre={{ matrix_host_command_sleep }} 3
 ExecStart={{ matrix_host_command_docker }} run --rm --name matrix-synapse \
 			--log-driver=none \
 			--user={{ matrix_user_uid }}:{{ matrix_user_gid }} \
-			--env=UID={{ matrix_user_uid }} \
-			--env=GID={{ matrix_user_gid }} \
 			--cap-drop=ALL \
 			--read-only \
 			--tmpfs=/tmp:rw,noexec,nosuid,size={{ matrix_synapse_tmp_directory_size_mb }}m \
 			--network={{ matrix_docker_network }} \
 			{% if matrix_synapse_container_client_api_host_bind_port %}
-			-p {{ matrix_synapse_container_client_api_host_bind_port }}:8008 \
+			-p {{ matrix_synapse_container_client_api_host_bind_port }}:{{ matrix_synapse_container_client_api_port }} \
 			{% endif %}
 			{% if matrix_synapse_federation_enabled and matrix_synapse_tls_federation_listener_enabled and matrix_synapse_container_federation_api_tls_host_bind_port %}
-			-p {{ matrix_synapse_container_federation_api_tls_host_bind_port }}:8448 \
+			-p {{ matrix_synapse_container_federation_api_tls_host_bind_port }}:{{ matrix_synapse_container_federation_api_tls_port }} \
 			{% endif %}
-			{% if matrix_synapse_federation_enabled and matrix_synapse_container_federation_api_plain_host_bind_port %}
-			-p {{ matrix_synapse_container_federation_api_plain_host_bind_port }}:8048 \
+			{% if matrix_synapse_federation_enabled and matrix_synapse_federation_port_enabled and matrix_synapse_container_federation_api_plain_host_bind_port %}
+			-p {{ matrix_synapse_container_federation_api_plain_host_bind_port }}:{{ matrix_synapse_container_federation_api_plain_port }} \
 			{% endif %}
 			{% if matrix_synapse_metrics_enabled and matrix_synapse_container_metrics_api_host_bind_port %}
 			-p {{ matrix_synapse_container_metrics_api_host_bind_port }}:{{ matrix_synapse_metrics_port }} \
@@ -65,8 +63,8 @@ ExecStart={{ matrix_host_command_docker }} run --rm --name matrix-synapse \
 			{{ matrix_synapse_docker_image }} \
 			run -m synapse.app.homeserver -c /data/homeserver.yaml
 
-ExecStop=-{{ matrix_host_command_sh }} -c '{{ matrix_host_command_docker }} kill matrix-synapse 2>/dev/null'
-ExecStop=-{{ matrix_host_command_sh }} -c '{{ matrix_host_command_docker }} rm matrix-synapse 2>/dev/null'
+ExecStop=-{{ matrix_host_command_sh }} -c '{{ matrix_host_command_docker }} kill matrix-synapse 2>/dev/null || true'
+ExecStop=-{{ matrix_host_command_sh }} -c '{{ matrix_host_command_docker }} rm matrix-synapse 2>/dev/null || true'
 ExecReload={{ matrix_host_command_docker }} exec matrix-synapse /bin/sh -c 'kill -HUP 1'
 Restart=always
 RestartSec=30

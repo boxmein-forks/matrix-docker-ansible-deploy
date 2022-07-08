@@ -39,10 +39,10 @@
     owner: "{{ matrix_user_username }}"
     group: "{{ matrix_user_groupname }}"
   with_items:
-    - { path: "{{ matrix_registration_base_path }}", when: true }
-    - { path: "{{ matrix_registration_config_path }}", when: true }
-    - { path: "{{ matrix_registration_data_path }}", when: true }
-    - { path: "{{ matrix_registration_docker_src_files_path }}", when: "{{ matrix_registration_container_image_self_build }}"}
+    - {path: "{{ matrix_registration_base_path }}", when: true}
+    - {path: "{{ matrix_registration_config_path }}", when: true}
+    - {path: "{{ matrix_registration_data_path }}", when: true}
+    - {path: "{{ matrix_registration_docker_src_files_path }}", when: "{{ matrix_registration_container_image_self_build }}"}
   when: "item.when|bool"
 
 - name: Ensure matrix-registration image is pulled
@@ -52,6 +52,10 @@
     force_source: "{{ matrix_registration_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_registration_docker_image_force_pull }}"
   when: "not matrix_registration_container_image_self_build|bool"
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 - name: Ensure matrix-registration repository is present when self-building
   git:
@@ -59,8 +63,18 @@
     dest: "{{ matrix_registration_docker_src_files_path }}"
     version: "{{ matrix_registration_container_image_self_build_branch }}"
     force: "yes"
+  become: true
+  become_user: "{{ matrix_user_username }}"
   register: matrix_registration_git_pull_results
   when: "matrix_registration_container_image_self_build|bool"
+
+# See: https://github.com/spantaleev/matrix-docker-ansible-deploy/issues/1864
+- name: Patch setup.py to allow self-built version to work
+  lineinfile:
+    path: "{{ matrix_registration_docker_src_files_path }}/setup.py"
+    regexp: 'flask-limiter'
+    line: '"flask-limiter~=1.1.0", "Markupsafe<2.1",'
+  when: "matrix_registration_container_image_self_build|bool and matrix_registration_container_image_self_build_python_dependencies_patch_enabled|bool"
 
 - name: Ensure matrix-registration Docker image is built
   docker_image:
@@ -71,12 +85,12 @@
     build:
       dockerfile: Dockerfile
       path: "{{ matrix_registration_docker_src_files_path }}"
-      pull: yes
+      pull: true
   when: "matrix_registration_container_image_self_build|bool"
 
 - name: Ensure matrix-registration config installed
   copy:
-    content: "{{ matrix_registration_configuration|to_nice_yaml }}"
+    content: "{{ matrix_registration_configuration|to_nice_yaml(indent=2, width=999999) }}"
     dest: "{{ matrix_registration_config_path }}/config.yaml"
     mode: 0644
     owner: "{{ matrix_user_username }}"
@@ -91,7 +105,7 @@
 
 - name: Ensure systemd reloaded after matrix-registration.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_registration_systemd_service_result.changed|bool"
 
 - name: Ensure matrix-registration.service restarted, if necessary

@@ -7,9 +7,10 @@
 
 - name: Ensure matrix-heisenbridge is stopped
   service:
-    name: heisenbridge
+    name: matrix-heisenbridge
     state: stopped
-    daemon_reload: yes
+    enabled: false
+    daemon_reload: true
   when: "matrix_heisenbridge_service_stat.stat.exists"
 
 - name: Ensure matrix-heisenbridge.service doesn't exist
@@ -20,5 +21,5 @@
 
 - name: Ensure systemd reloaded after matrix-heisenbridge.service removal
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_heisenbridge_service_stat.stat.exists"

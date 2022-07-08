@@ -38,6 +38,8 @@
         dest: "{{ matrix_postgres_pgloader_container_image_self_build_src_path }}"
         version: "{{ matrix_postgres_pgloader_container_image_self_build_repo_branch }}"
         force: "yes"
+      become: true
+      become_user: "{{ matrix_user_username }}"
       register: matrix_postgres_pgloader_git_pull_results
 
     # If `stable` is used, we hit an error when processing /opt/src/pgloader/build/quicklisp/dists/quicklisp/software/uax-15-20201220-git/data/CompositionExclusions.txt:
@@ -66,7 +68,7 @@
         build:
           dockerfile: Dockerfile
           path: "{{ matrix_postgres_pgloader_container_image_self_build_src_path }}"
-          pull: yes
+          pull: true
   when: "matrix_postgres_pgloader_container_image_self_build|bool"
 
 - name: Ensure pgloader Docker image is pulled
@@ -91,7 +93,7 @@
   service:
     name: matrix-postgres
     state: started
-    daemon_reload: yes
+    daemon_reload: true
   register: matrix_postgres_service_start_result
 
 - name: Wait a bit, so that Postgres can start

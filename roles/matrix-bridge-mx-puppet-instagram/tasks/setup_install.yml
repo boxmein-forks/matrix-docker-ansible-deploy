@@ -42,6 +42,10 @@
     force_source: "{{ matrix_mx_puppet_instagram_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_mx_puppet_instagram_docker_image_force_pull }}"
   when: matrix_mx_puppet_instagram_enabled|bool and not matrix_mx_puppet_instagram_container_image_self_build
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 - name: Ensure mx-puppet-instagram paths exist
   file:
@@ -51,10 +55,10 @@
     owner: "{{ matrix_user_username }}"
     group: "{{ matrix_user_groupname }}"
   with_items:
-    - { path: "{{ matrix_mx_puppet_instagram_base_path }}", when: true }
-    - { path: "{{ matrix_mx_puppet_instagram_config_path }}", when: true }
-    - { path: "{{ matrix_mx_puppet_instagram_data_path }}", when: true }
-    - { path: "{{ matrix_mx_puppet_instagram_docker_src_files_path }}", when: "{{ matrix_mx_puppet_instagram_container_image_self_build }}" }
+    - {path: "{{ matrix_mx_puppet_instagram_base_path }}", when: true}
+    - {path: "{{ matrix_mx_puppet_instagram_config_path }}", when: true}
+    - {path: "{{ matrix_mx_puppet_instagram_data_path }}", when: true}
+    - {path: "{{ matrix_mx_puppet_instagram_docker_src_files_path }}", when: "{{ matrix_mx_puppet_instagram_container_image_self_build }}"}
   when: matrix_mx_puppet_instagram_enabled|bool and item.when|bool
 
 - name: Ensure mx-puppet-instagram repository is present on self build
@@ -62,6 +66,8 @@
     repo: "{{ matrix_mx_puppet_instagram_container_image_self_build_repo }}"
     dest: "{{ matrix_mx_puppet_instagram_docker_src_files_path }}"
     force: "yes"
+  become: true
+  become_user: "{{ matrix_user_username }}"
   register: matrix_mx_puppet_instagram_git_pull_results
   when: "matrix_mx_puppet_instagram_enabled|bool and matrix_mx_puppet_instagram_container_image_self_build|bool"
 
@@ -74,12 +80,12 @@
     build:
       dockerfile: Dockerfile
       path: "{{ matrix_mx_puppet_instagram_docker_src_files_path }}"
-      pull: yes
+      pull: true
   when: "matrix_mx_puppet_instagram_enabled|bool and matrix_mx_puppet_instagram_container_image_self_build|bool"
 
 - name: Ensure mx-puppet-instagram config.yaml installed
   copy:
-    content: "{{ matrix_mx_puppet_instagram_configuration|to_nice_yaml }}"
+    content: "{{ matrix_mx_puppet_instagram_configuration|to_nice_yaml(indent=2, width=999999) }}"
     dest: "{{ matrix_mx_puppet_instagram_config_path }}/config.yaml"
     mode: 0644
     owner: "{{ matrix_user_username }}"
@@ -87,7 +93,7 @@
 
 - name: Ensure mx-puppet-instagram-registration.yaml installed
   copy:
-    content: "{{ matrix_mx_puppet_instagram_registration|to_nice_yaml }}"
+    content: "{{ matrix_mx_puppet_instagram_registration|to_nice_yaml(indent=2, width=999999) }}"
     dest: "{{ matrix_mx_puppet_instagram_config_path }}/registration.yaml"
     mode: 0644
     owner: "{{ matrix_user_username }}"
@@ -102,7 +108,7 @@
 
 - name: Ensure systemd reloaded after matrix-mx-puppet-instagram.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_mx_puppet_instagram_systemd_service_result.changed"
 
 - name: Ensure matrix-mx-puppet-instagram.service restarted, if necessary

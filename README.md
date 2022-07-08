@@ -19,6 +19,8 @@ Using this playbook, you can get the following services configured on your serve
 
 - (optional, default) a [Synapse](https://github.com/matrix-org/synapse) homeserver - storing your data and managing your presence in the [Matrix](http://matrix.org/) network
 
+- (optional) a [Dendrite](https://github.com/matrix-org/dendrite) homeserver - storing your data and managing your presence in the [Matrix](http://matrix.org/) network. Dendrite is a second-generation Matrix homeserver written in Go, an alternative to Synapse.
+
 - (optional) [Amazon S3](https://aws.amazon.com/s3/) storage for Synapse's content repository (`media_store`) files using [Goofys](https://github.com/kahing/goofys)
 
 - (optional, default) [PostgreSQL](https://www.postgresql.org/) database for Synapse. [Using an external PostgreSQL server](docs/configuring-playbook-external-postgres.md) is also possible.
@@ -29,7 +31,7 @@ Using this playbook, you can get the following services configured on your serve
 
 - (optional, default) an [Element](https://app.element.io/) ([formerly Riot](https://element.io/previously-riot)) web UI, which is configured to connect to your own Synapse server by default
 
-- (optional, default) a [ma1sd](https://github.com/ma1uta/ma1sd) Matrix Identity server
+- (optional) a [ma1sd](https://github.com/ma1uta/ma1sd) Matrix Identity server
 
 - (optional, default) an [Exim](https://www.exim.org/) mail server, through which all Matrix services send outgoing email (can be configured to relay through another SMTP server)
 
@@ -45,17 +47,23 @@ Using this playbook, you can get the following services configured on your serve
 
 - (optional, advanced) the [Matrix Corporal](https://github.com/devture/matrix-corporal) reconciliator and gateway for a managed Matrix server
 
-- (optional) the [mautrix-telegram](https://github.com/tulir/mautrix-telegram) bridge for bridging your Matrix server to [Telegram](https://telegram.org/)
+- (optional) the [mautrix-telegram](https://github.com/mautrix/telegram) bridge for bridging your Matrix server to [Telegram](https://telegram.org/)
 
-- (optional) the [mautrix-whatsapp](https://github.com/tulir/mautrix-whatsapp) bridge for bridging your Matrix server to [WhatsApp](https://www.whatsapp.com/)
+- (optional) the [mautrix-whatsapp](https://github.com/mautrix/whatsapp) bridge for bridging your Matrix server to [WhatsApp](https://www.whatsapp.com/)
 
-- (optional) the [mautrix-facebook](https://github.com/tulir/mautrix-facebook) bridge for bridging your Matrix server to [Facebook](https://facebook.com/)
+- (optional) the [mautrix-facebook](https://github.com/mautrix/facebook) bridge for bridging your Matrix server to [Facebook](https://facebook.com/)
 
-- (optional) the [mautrix-hangouts](https://github.com/tulir/mautrix-hangouts) bridge for bridging your Matrix server to [Google Hangouts](https://en.wikipedia.org/wiki/Google_Hangouts)
+- (optional) the [mautrix-twitter](https://github.com/mautrix/twitter) bridge for bridging your Matrix server to [Twitter](https://twitter.com/)
 
-- (optional) the [mautrix-instagram](https://github.com/tulir/mautrix-instagram) bridge for bridging your Matrix server to [Instagram](https://instagram.com/)
+- (optional) the [mautrix-hangouts](https://github.com/mautrix/hangouts) bridge for bridging your Matrix server to [Google Hangouts](https://en.wikipedia.org/wiki/Google_Hangouts)
 
-- (optional) the [mautrix-signal](https://github.com/tulir/mautrix-signal) bridge for bridging your Matrix server to [Signal](https://www.signal.org/)
+- (optional) the [mautrix-googlechat](https://github.com/mautrix/googlechat) bridge for bridging your Matrix server to [Google Chat](https://en.wikipedia.org/wiki/Google_Chat)
+
+- (optional) the [mautrix-instagram](https://github.com/mautrix/instagram) bridge for bridging your Matrix server to [Instagram](https://instagram.com/)
+
+- (optional) the [mautrix-signal](https://github.com/mautrix/signal) bridge for bridging your Matrix server to [Signal](https://www.signal.org/)
+
+- (optional) the [beeper-linkedin](https://gitlab.com/beeper/linkedin) bridge for bridging your Matrix server to [LinkedIn](https://www.linkedin.com/)
 
 - (optional) the [matrix-appservice-irc](https://github.com/matrix-org/matrix-appservice-irc) bridge for bridging your Matrix server to [IRC](https://wikipedia.org/wiki/Internet_Relay_Chat)
 
@@ -64,6 +72,8 @@ Using this playbook, you can get the following services configured on your serve
 - (optional) the [matrix-appservice-slack](https://github.com/matrix-org/matrix-appservice-slack) bridge for bridging your Matrix server to [Slack](https://slack.com/)
 
 - (optional) the [matrix-appservice-webhooks](https://github.com/turt2live/matrix-appservice-webhooks) bridge for slack compatible webhooks ([ConcourseCI](https://concourse-ci.org/), [Slack](https://slack.com/) etc. pp.)
+
+- (optional) the [matrix-hookshot](https://github.com/Half-Shot/matrix-hookshot) bridge for bridging Matrix to generic webhooks and multiple project management services, such as GitHub, GitLab, Figma, and Jira in particular
 
 - (optional) the [matrix-sms-bridge](https://github.com/benkuly/matrix-sms-bridge) for bridging your Matrix server to SMS - see [docs/configuring-playbook-bridge-matrix-bridge-sms.md](docs/configuring-playbook-bridge-matrix-bridge-sms.md) for setup documentation
 
@@ -93,6 +103,8 @@ Using this playbook, you can get the following services configured on your serve
 
 - (optional) [matrix-reminder-bot](https://github.com/anoadragon453/matrix-reminder-bot) for scheduling one-off & recurring reminders and alarms - see [docs/configuring-playbook-bot-matrix-reminder-bot.md](docs/configuring-playbook-bot-matrix-reminder-bot.md) for setup documentation
 
+- (optional) [honoroit](https://gitlab.com/etke.cc/honoroit) helpdesk bot - see [docs/configuring-playbook-bot-honoroit.md](docs/configuring-playbook-bot-honoroit.md) for setup documentation
+
 - (optional) [Go-NEB](https://github.com/matrix-org/go-neb) multi functional bot written in Go - see [docs/configuring-playbook-bot-go-neb.md](docs/configuring-playbook-bot-go-neb.md) for setup documentation
 
 - (optional) [Mjolnir](https://github.com/matrix-org/mjolnir), a moderation tool for Matrix - see [docs/configuring-playbook-bot-mjolnir.md](docs/configuring-playbook-bot-mjolnir.md) for setup documentation
@@ -106,6 +118,12 @@ Using this playbook, you can get the following services configured on your serve
 - (optional) the [Sygnal](https://github.com/matrix-org/sygnal) push gateway - see [Setting up the Sygnal push gateway](docs/configuring-playbook-sygnal.md) for setup documentation
 
 - (optional) the [Hydrogen](https://github.com/vector-im/hydrogen-web) web client - see [docs/configuring-playbook-client-hydrogen.md](docs/configuring-playbook-client-hydrogen.md) for setup documentation
+
+- (optional) the [Cinny](https://github.com/ajbura/cinny) web client - see [docs/configuring-playbook-client-cinny.md](docs/configuring-playbook-client-cinny.md) for setup documentation
+
+- (optional) the [Borg](https://borgbackup.org) backup - see [docs/configuring-playbook-backup-borg.md](docs/configuring-playbook-backup-borg.md) for setup documentation
+
+- (optional) the [Buscarron](https://gitlab.com/etke.cc/buscarron) bot - see [docs/configuring-playbook-bot-buscarron.md](docs/configuring-playbook-bot-buscarron.md) for setup documentation
 
 Basically, this playbook aims to get you up-and-running with all the necessities around Matrix, without you having to do anything else.
 
@@ -138,5 +156,3 @@ When updating the playbook, refer to [the changelog](CHANGELOG.md) to catch up w
 ## Services by the community
 
 - [etke.cc](https://etke.cc) - matrix-docker-ansible-deploy and system stuff "as a service". That service will create your matrix homeserver on your domain and server (doesn't matter if it's cloud provider or on an old laptop in the corner of your room), (optional) maintains it (server's system updates, cleanup, security adjustments, tuning, etc.; matrix homeserver updates & maintenance) and (optional) provide full-featured email service for your domain
-
-- [GoMatrixHosting](https://gomatrixhosting.com) - matrix-docker-ansible-deploy "as a service" with [Ansible AWX](https://github.com/ansible/awx). Members can be assigned a server from DigitalOcean, or they can connect their on-premises server. This AWX system can manage the updates, configuration, import and export, backups, and monitoring on its own. For more information [see our GitLab group](https://gitlab.com/GoMatrixHosting) or come [visit us on Matrix](https://matrix.to/#/#general:gomatrixhosting.com).

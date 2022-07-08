@@ -7,7 +7,6 @@
     - roles/matrix-synapse/vars/workers.yml
 
   roles:
-    - matrix-awx
     - matrix-base
     - matrix-dynamic-dns
     - matrix-mailer
@@ -18,8 +17,12 @@
     - matrix-bridge-appservice-slack
     - matrix-bridge-appservice-webhooks
     - matrix-bridge-appservice-irc
+    - matrix-bridge-beeper-linkedin
+    - matrix-bridge-go-skype-bridge
     - matrix-bridge-mautrix-facebook
+    - matrix-bridge-mautrix-twitter
     - matrix-bridge-mautrix-hangouts
+    - matrix-bridge-mautrix-googlechat
     - matrix-bridge-mautrix-instagram
     - matrix-bridge-mautrix-signal
     - matrix-bridge-mautrix-telegram
@@ -33,17 +36,24 @@
     - matrix-bridge-mx-puppet-instagram
     - matrix-bridge-sms
     - matrix-bridge-heisenbridge
+    - matrix-bridge-hookshot
     - matrix-bot-matrix-reminder-bot
+    - matrix-bot-matrix-registration-bot
+    - matrix-bot-buscarron
+    - matrix-bot-honoroit
     - matrix-bot-go-neb
     - matrix-bot-mjolnir
     - matrix-synapse
+    - matrix-dendrite
     - matrix-synapse-admin
     - matrix-prometheus-node-exporter
+    - matrix-prometheus-postgres-exporter
     - matrix-prometheus
     - matrix-grafana
     - matrix-registration
     - matrix-client-element
     - matrix-client-hydrogen
+    - matrix-client-cinny
     - matrix-jitsi
     - matrix-ma1sd
     - matrix-dimension
@@ -54,5 +64,5 @@
     - matrix-coturn
     - matrix-aux
     - matrix-postgres-backup
-    - matrix-prometheus-postgres-exporter
+    - matrix-backup-borg
     - matrix-common-after

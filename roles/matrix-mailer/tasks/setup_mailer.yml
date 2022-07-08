@@ -12,8 +12,8 @@
     owner: "{{ matrix_user_username }}"
     group: "{{ matrix_user_groupname }}"
   with_items:
-    - { path: "{{ matrix_mailer_base_path }}", when: true }
-    - { path: "{{ matrix_mailer_container_image_self_build_src_files_path }}", when: "{{ matrix_mailer_container_image_self_build }}" }
+    - {path: "{{ matrix_mailer_base_path }}", when: true}
+    - {path: "{{ matrix_mailer_container_image_self_build_src_files_path }}", when: "{{ matrix_mailer_container_image_self_build }}"}
   when: "matrix_mailer_enabled|bool and item.when"
 
 - name: Ensure mailer environment variables file created
@@ -29,6 +29,8 @@
     dest: "{{ matrix_mailer_container_image_self_build_src_files_path }}"
     version: "{{ matrix_mailer_container_image_self_build_version }}"
     force: "yes"
+  become: true
+  become_user: "{{ matrix_user_username }}"
   register: matrix_mailer_git_pull_results
   when: "matrix_mailer_enabled|bool and matrix_mailer_container_image_self_build|bool"
 
@@ -41,7 +43,7 @@
     build:
       dockerfile: Dockerfile
       path: "{{ matrix_mailer_container_image_self_build_src_files_path }}"
-      pull: yes
+      pull: true
   when: "matrix_mailer_enabled|bool and matrix_mailer_container_image_self_build|bool"
 
 - name: Ensure exim-relay image is pulled
@@ -51,6 +53,10 @@
     force_source: "{{ matrix_mailer_docker_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else matrix_mailer_docker_image_force_pull }}"
   when: "matrix_mailer_enabled|bool and not matrix_mailer_container_image_self_build|bool"
+  register: result
+  retries: "{{ matrix_container_retries_count }}"
+  delay: "{{ matrix_container_retries_delay }}"
+  until: result is not failed
 
 - name: Ensure matrix-mailer.service installed
   template:
@@ -62,7 +68,7 @@
 
 - name: Ensure systemd reloaded after matrix-mailer.service installation
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "matrix_mailer_enabled|bool and matrix_mailer_systemd_service_result.changed"
 
 #
@@ -79,7 +85,8 @@
   service:
     name: matrix-mailer
     state: stopped
-    daemon_reload: yes
+    enabled: false
+    daemon_reload: true
   register: stopping_result
   when: "not matrix_mailer_enabled|bool and matrix_mailer_service_stat.stat.exists"
 
@@ -91,7 +98,7 @@
 
 - name: Ensure systemd reloaded after matrix-mailer.service removal
   service:
-    daemon_reload: yes
+    daemon_reload: true
   when: "not matrix_mailer_enabled|bool and matrix_mailer_service_stat.stat.exists"
 
 - name: Ensure Matrix mailer environment variables path doesn't exist

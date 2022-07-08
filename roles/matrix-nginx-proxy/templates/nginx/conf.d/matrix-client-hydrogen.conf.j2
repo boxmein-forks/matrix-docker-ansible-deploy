@@ -33,12 +33,14 @@
 		{% endif %}
 
 		proxy_set_header Host $host;
-		proxy_set_header X-Forwarded-For $remote_addr;
+		proxy_set_header X-Forwarded-For {{ matrix_nginx_proxy_x_forwarded_for }};
 	}
 {% endmacro %}
 
 server {
 	listen {{ 8080 if matrix_nginx_proxy_enabled else 80 }};
+	listen [::]:{{ 8080 if matrix_nginx_proxy_enabled else 80 }};
+
 
 	server_name {{ matrix_nginx_proxy_proxy_hydrogen_hostname }};
 
@@ -88,7 +90,7 @@ server {
 	{% if matrix_nginx_proxy_ocsp_stapling_enabled %}
 		ssl_stapling on;
 		ssl_stapling_verify on;
-		ssl_trusted_certificate {{ matrix_ssl_config_dir_path }}/live/{{ matrix_nginx_proxy_proxy_element_hostname }}/chain.pem;
+		ssl_trusted_certificate {{ matrix_ssl_config_dir_path }}/live/{{ matrix_nginx_proxy_proxy_hydrogen_hostname }}/chain.pem;
 	{% endif %}
 
 	{% if matrix_nginx_proxy_ssl_session_tickets_off %}
