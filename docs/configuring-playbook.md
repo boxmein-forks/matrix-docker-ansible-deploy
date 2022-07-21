@@ -120,7 +120,7 @@ When you're done with all the configuration you'd like to do, continue with [Ins
 
 - [Setting up matrix-hookshot](configuring-playbook-bridge-hookshot.md) - a bridge between Matrix and multiple project management services, such as [GitHub](https://github.com), [GitLab](https://about.gitlab.com) and [JIRA](https://www.atlassian.com/software/jira). (optional)
 
-- [Setting up MX Puppet Skype bridging](configuring-playbook-bridge-mx-puppet-skype.md) (optional) - often reported as broken; see **Go Skype Bridge** (below) as an alternative
+- ~~[Setting up MX Puppet Skype bridging](configuring-playbook-bridge-mx-puppet-skype.md)~~ (optional) - this component has been broken for a long time, so it has been removed from the playbook. Consider [Setting up Go Skype Bridge bridging](configuring-playbook-bridge-go-skype-bridge.md)
 
 - [Setting up MX Puppet Slack bridging](configuring-playbook-bridge-mx-puppet-slack.md) (optional)
 
@@ -149,6 +149,8 @@ When you're done with all the configuration you'd like to do, continue with [Ins
 
 - [Setting up matrix-registration-bot](configuring-playbook-bot-matrix-registration-bot.md) - a bot to create and manage registration tokens to invite users (optional)
 
+- [Setting up maubot](configuring-playbook-bot-maubot.md) - a plugin-based Matrix bot system (optional)
+
 - [Setting up honoroit](configuring-playbook-bot-honoroit.md) - a helpdesk bot (optional)
 
 - [Setting up Go-NEB](configuring-playbook-bot-go-neb.md) - an extensible multifunctional bot (optional)
@@ -168,3 +170,5 @@ When you're done with all the configuration you'd like to do, continue with [Ins
 ### Other specialized services
 
 - [Setting up the Sygnal push gateway](configuring-playbook-sygnal.md) (optional)
+
+- [Setting up the ntfy push notifications server](configuring-playbook-ntfy.md) (optional)
