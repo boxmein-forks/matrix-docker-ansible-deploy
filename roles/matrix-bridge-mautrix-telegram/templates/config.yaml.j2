@@ -65,6 +65,8 @@ appservice:
     as_token: {{ matrix_mautrix_telegram_appservice_token|to_json }}
     hs_token: {{ matrix_mautrix_telegram_homeserver_token|to_json }}
 
+    ephemeral_events: true
+
 # Bridge config
 bridge:
     # Localpart template of MXIDs for Telegram users.
@@ -138,7 +140,8 @@ bridge:
     public_portals: true
     # Whether or not to use /sync to get presence, read receipts and typing notifications when using
     # your own Matrix account as the Matrix puppet for your Telegram account.
-    sync_with_custom_puppets: true
+    # note: set to false because ephemeral_events = true above 
+    sync_with_custom_puppets: false
     # Shared secret for https://github.com/devture/matrix-synapse-shared-secret-auth
     #
     # If set, custom puppets will be enabled automatically for local users
