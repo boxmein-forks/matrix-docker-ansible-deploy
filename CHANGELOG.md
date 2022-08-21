@@ -1,3 +1,31 @@
+# 2022-08-10
+
+## mautrix-whatsapp default configuration changes
+
+In [Pull Request #2012](https://github.com/spantaleev/matrix-docker-ansible-deploy/pull/2012), we've made some changes to the default configuration used by the `mautrix-whatsapp` bridge.
+
+If you're using this bridge, you should look into this PR and see if the new configuration suits you. If not, you can always change individual preferences in your `vars.yml` file.
+
+Most notably, spaces support has been enabled by default. The bridge will now group rooms into a Matrix space. **If you've already bridged to Whatsapp** prior to this update, you will need to send `!wa sync space` to the bridge bot to make it create the space and put your existing rooms into it.
+
+
+# 2022-08-09
+
+## Conduit support
+
+Thanks to [Charles Wright](https://github.com/cvwright), we now have optional experimental [Conduit](https://conduit.rs) homeserver support for new installations. This comes as a follow-up to the playbook getting [Dendrite support](#dendrite-support) earlier this year.
+
+Existing Synapse or Dendrite installations do **not** need to be updated. **Synapse is still the default homeserver implementation** installed by the playbook.
+
+To try out Conduit, we recommend that you **use a new server** and the following `vars.yml` configuration:
+
+```yaml
+matrix_homeserver_implementation: conduit
+```
+
+**The homeserver implementation of an existing server cannot be changed** (e.g. from Synapse or Dendrite to Conduit) without data loss.
+
+
 # 2022-07-29
 
 ## mautrix-discord support

@@ -9,7 +9,7 @@ matrix_synapse_container_image_self_build_repo: "https://github.com/matrix-org/s
 
 matrix_synapse_docker_image: "{{ matrix_synapse_docker_image_name_prefix }}matrixdotorg/synapse:{{ matrix_synapse_docker_image_tag }}"
 matrix_synapse_docker_image_name_prefix: "{{ 'localhost/' if matrix_synapse_container_image_self_build else matrix_container_global_registry_prefix }}"
-matrix_synapse_version: v1.63.1
+matrix_synapse_version: v1.65.0
 matrix_synapse_docker_image_tag: "{{ matrix_synapse_version }}"
 matrix_synapse_docker_image_force_pull: "{{ matrix_synapse_docker_image.endswith(':latest') }}"
 
@@ -141,6 +141,19 @@ matrix_synapse_rc_joins:
   remote:
     per_second: 0.01
     burst_count: 3
+
+
+matrix_synapse_rc_invites:
+  per_room:
+    per_second: 0.5
+    burst_count: 5
+  per_user:
+    per_second: 0.004
+    burst_count: 3
+  per_issuer:
+    per_second: 0.5
+    burst_count: 5
+
 
 matrix_synapse_rc_federation:
   window_size: 1000
