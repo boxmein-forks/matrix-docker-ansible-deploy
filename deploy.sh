@@ -5,8 +5,16 @@ if ! command -v ansible-playbook >/dev/null 2>/dev/null; then
 	exit 1
 fi
 
+if [[ ! -f ./.password ]]; then
+	op read -o .password op://Private/Matrix.boxmein.net/ansible-vault
+fi
+
+if [[ ! -f ./.become-password ]]; then
+	op read -o .become-password op://Private/Matrix.boxmein.net/become-pass
+fi
+
 run_ansible_command() {
-	ansible-playbook --ask-become-pass --ask-vault-pass -i inventory/hosts setup.yml --tags=${1}
+	ansible-playbook --become-password-file ./.become-password --vault-password-file ./.password -i inventory/hosts setup.yml --tags=${1}
 }
 
 verify_setup() {
@@ -40,4 +48,3 @@ case $1 in
 	*)
 		synchronize ;;
 esac
-

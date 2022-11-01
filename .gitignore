@@ -8,3 +8,5 @@
 .DS_Store
 .python-version
 venv
+.become-password
+.password
