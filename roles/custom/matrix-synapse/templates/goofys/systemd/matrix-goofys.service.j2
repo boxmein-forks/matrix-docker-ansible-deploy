@@ -15,7 +15,6 @@ ExecStartPre=-{{ devture_systemd_docker_base_host_command_docker }} rm %n
 
 ExecStart={{ devture_systemd_docker_base_host_command_docker }} run --rm --name %n \
 			--log-driver=none \
-			--user={{ matrix_synapse_uid }}:{{ matrix_synapse_gid }} \
 			--mount type=bind,src=/etc/passwd,dst=/etc/passwd,ro \
 			--mount type=bind,src=/etc/group,dst=/etc/group,ro \
 			--mount type=bind,src={{ matrix_s3_media_store_path }},dst=/s3,bind-propagation=shared \
@@ -26,7 +25,7 @@ ExecStart={{ devture_systemd_docker_base_host_command_docker }} run --rm --name 
 			--env-file={{ matrix_synapse_config_dir_path }}/env-goofys \
 			--entrypoint /bin/sh \
 			{{ matrix_s3_goofys_container_image }} \
-			-c 'goofys -f{% if not matrix_s3_media_store_custom_endpoint_enabled %} --storage-class=STANDARD_IA{% endif %}{% if matrix_s3_media_store_custom_endpoint_enabled %} --endpoint={{ matrix_s3_media_store_custom_endpoint }}{% endif %} --region {{ matrix_s3_media_store_region }} --stat-cache-ttl 60m0s --type-cache-ttl 60m0s --dir-mode 0700 --file-mode 0700 {{ matrix_s3_media_store_bucket_name }} /s3'
+			-c 'goofys -o allow_other --uid {{ matrix_user_uid }} --gid {{ matrix_user_gid }} -f{% if not matrix_s3_media_store_custom_endpoint_enabled %} --storage-class=STANDARD_IA{% endif %}{% if matrix_s3_media_store_custom_endpoint_enabled %} --endpoint={{ matrix_s3_media_store_custom_endpoint }}{% endif %} --region {{ matrix_s3_media_store_region }} --stat-cache-ttl 60m0s --type-cache-ttl 60m0s --dir-mode 0700 --file-mode 0700 {{ matrix_s3_media_store_bucket_name }} /s3'
 
 # Allow for some time before starting, so that this can start and media is fully mountable.
 ExecStartPost={{ matrix_host_command_sleep }} 3
