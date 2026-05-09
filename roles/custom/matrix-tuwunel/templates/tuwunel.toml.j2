@@ -57,6 +57,9 @@ forbidden_remote_room_directory_server_names = {{ matrix_tuwunel_config_forbidde
 prevent_media_downloads_from = {{ matrix_tuwunel_config_prevent_media_downloads_from | to_json }}
 {% endif %}
 
+enable_policy_servers = {{ matrix_tuwunel_config_enable_policy_servers | to_json }}
+policy_server_request_timeout = {{ matrix_tuwunel_config_policy_server_request_timeout }}
+
 allow_outgoing_presence = {{ matrix_tuwunel_config_allow_outgoing_presence | to_json }}
 
 {% if matrix_tuwunel_config_url_preview_domain_contains_allowlist | length > 0 %}
